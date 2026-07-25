@@ -2,7 +2,9 @@ import { guard } from "@/lib/guard";
 import { query } from "@/db/client";
 import { PageHeader, Card, StatCard, Section, Badge, Avatar, EmptyState, FeatureLocked } from "@/components/ui";
 import { Icon } from "@/components/icons";
+import { SubmitButton } from "@/components/FormControls";
 import { fullName, timeAgo, titleCase, WEEKDAYS } from "@/lib/format";
+import { checkInMember } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +44,7 @@ export default async function CheckinPage() {
   // JS weekday → 1=Mon .. 7=Sun
   const todayWeekday = ((new Date().getDay() + 6) % 7) + 1;
 
-  const [todayClasses, checkins, kpi, roster] = await Promise.all([
+  const [todayClasses, checkins, kpi, roster, checkedInIds] = await Promise.all([
     query<TodayClass>(
       `SELECT c.id, c.title, c.start_time, c.end_time, c.capacity, c.resource, c.is_sparring,
               ct.color, co.name AS coach_name,
@@ -76,14 +78,19 @@ export default async function CheckinPage() {
     query<MemberRow>(
       `SELECT id, first_name, last_name, status, photo_url
          FROM members
-        WHERE tenant_id = $1 AND status = 'active'
+        WHERE tenant_id = $1 AND status IN ('active','trial','overdue')
         ORDER BY first_name, last_name
-        LIMIT 48`,
+        LIMIT 60`,
+      [t]
+    ),
+    query<{ member_id: string }>(
+      `SELECT DISTINCT member_id FROM attendance WHERE tenant_id=$1 AND session_date=current_date`,
       [t]
     ),
   ]);
 
   const k = kpi[0] ?? { checkins: 0, unique_members: 0, no_shows: 0 };
+  const checkedIn = new Set(checkedInIds.map((r) => r.member_id));
   const methodTone = (m: string): "green" | "blue" | "amber" | "slate" =>
     m === "kiosk" ? "green" : m === "app" ? "blue" : m === "manual" ? "amber" : "slate";
 
@@ -176,15 +183,28 @@ export default async function CheckinPage() {
             ) : (
               <Card padding={false}>
                 <div className="max-h-[560px] overflow-y-auto divide-y" style={{ borderColor: "var(--border)" }}>
-                  {roster.map((m) => (
-                    <div key={m.id} className="flex items-center gap-3 p-2.5 hover:bg-[var(--bg-subtle)] cursor-pointer">
-                      <Avatar name={fullName(m)} url={m.photo_url} size={34} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{fullName(m)}</p>
+                  {roster.map((m) => {
+                    const done = checkedIn.has(m.id);
+                    return (
+                      <div key={m.id} className="flex items-center gap-3 p-2.5">
+                        <Avatar name={fullName(m)} url={m.photo_url} size={34} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{fullName(m)}</p>
+                          {m.status !== "active" && <p className="text-[11px] faint capitalize">{m.status}</p>}
+                        </div>
+                        {done ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold" style={{ color: "#059669" }}>
+                            <Icon name="check" size={16} /> ingecheckt
+                          </span>
+                        ) : (
+                          <form action={checkInMember}>
+                            <input type="hidden" name="memberId" value={m.id} />
+                            <SubmitButton icon="check" variant="secondary" className="btn-sm" pendingLabel="…">Check-in</SubmitButton>
+                          </form>
+                        )}
                       </div>
-                      <Icon name="chevronRight" size={16} className="faint" />
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </Card>
             )}

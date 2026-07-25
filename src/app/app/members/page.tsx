@@ -2,6 +2,8 @@ import { guard } from "@/lib/guard";
 import { query } from "@/db/client";
 import { PageHeader, Card, StatCard, DataTable, StatusBadge, Badge, Avatar, EmptyState, LinkButton, FeatureLocked } from "@/components/ui";
 import { money, dateNL, fullName, age, titleCase } from "@/lib/format";
+import { can } from "@/lib/rbac";
+import { NewMemberModal } from "./NewMemberModal";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -39,7 +41,8 @@ export default async function MembersPage() {
   const t = user.tenantId;
   const cur = user.tenant.currency;
 
-  const [members, kpiRows] = await Promise.all([
+  const canWrite = can(user, "member.write");
+  const [members, kpiRows, packages] = await Promise.all([
     query<MemberRow>(
       `SELECT m.id, m.first_name, m.last_name, m.member_no, m.status, m.dob, m.is_minor,
               m.photo_url, m.join_date, m.experience, m.goal,
@@ -68,6 +71,10 @@ export default async function MembersPage() {
          FROM members WHERE tenant_id = $1`,
       [t]
     ),
+    query<{ id: string; name: string; price: number }>(
+      `SELECT id, name, price::float AS price FROM packages WHERE tenant_id=$1 AND active ORDER BY sort`,
+      [t]
+    ),
   ]);
 
   const k = kpiRows[0] ?? { total: 0, active: 0, trial: 0, overdue: 0, frozen: 0, prospect: 0, minors: 0 };
@@ -87,7 +94,7 @@ export default async function MembersPage() {
         title="Leden"
         subtitle="Ledenadministratie, statussen en betrokkenheid"
         icon="users"
-        actions={<LinkButton href="/app/leads" icon="funnel" variant="secondary">Leads</LinkButton>}
+        actions={<div className="flex items-center gap-2"><LinkButton href="/app/leads" icon="funnel" variant="secondary">Leads</LinkButton>{canWrite && <NewMemberModal packages={packages} />}</div>}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">

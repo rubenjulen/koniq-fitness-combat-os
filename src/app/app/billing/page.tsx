@@ -3,6 +3,8 @@ import { query } from "@/db/client";
 import { PageHeader, Card, StatCard, Section, DataTable, StatusBadge, Badge, Avatar, EmptyState, Progress, FeatureLocked } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { money, dateNL, fullName, titleCase, pct } from "@/lib/format";
+import { can } from "@/lib/rbac";
+import { RecordPaymentModal } from "./RecordPaymentModal";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +44,7 @@ export default async function BillingPage() {
   if (!user.ok) return <FeatureLocked feature="Betalingen & facturatie" pack="starter" />;
   const t = user.tenantId;
   const cur = user.tenant.currency;
+  const canWrite = can(user, "billing.write");
 
   const [kpiRows, openInvoices, payments, agingRows, methods] = await Promise.all([
     query<Kpi>(
@@ -179,6 +182,7 @@ export default async function BillingPage() {
                 <th>Vervaldatum</th>
                 <th>Status</th>
                 <th className="text-right">Bedrag</th>
+                {canWrite && <th className="text-right">Actie</th>}
               </>
             }
           >
@@ -201,6 +205,13 @@ export default async function BillingPage() {
                   <td className="tabular-nums" style={{ color: overdue ? "#dc2626" : "var(--text-muted)" }}>{dateNL(inv.due_date)}</td>
                   <td><StatusBadge status={inv.status} /></td>
                   <td className="text-right tabular-nums font-semibold" style={{ color: "var(--text)" }}>{money(inv.amount, cur)}</td>
+                  {canWrite && (
+                    <td className="text-right">
+                      <div className="flex justify-end">
+                        <RecordPaymentModal invoiceId={inv.id} amount={inv.amount} memberName={fullName(inv)} />
+                      </div>
+                    </td>
+                  )}
                 </tr>
               );
             })}

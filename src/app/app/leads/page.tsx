@@ -2,6 +2,8 @@ import { guard } from "@/lib/guard";
 import { query } from "@/db/client";
 import { PageHeader, Card, StatCard, Section, DataTable, StatusBadge, Badge, Avatar, EmptyState, FeatureLocked } from "@/components/ui";
 import { timeAgo, titleCase, pct } from "@/lib/format";
+import { can } from "@/lib/rbac";
+import { NewLeadModal, LeadRowActions } from "./LeadActions";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +32,7 @@ export default async function LeadsPage() {
   const user = await guard({ feature: "crm", cap: "lead.read" });
   if (!user.ok) return <FeatureLocked feature="CRM & leads" pack="starter" />;
   const t = user.tenantId;
+  const canWrite = can(user, "lead.write");
 
   const [leads, lostReasons, sources, kpi] = await Promise.all([
     query<Lead>(
@@ -85,7 +88,8 @@ export default async function LeadsPage() {
 
   return (
     <>
-      <PageHeader title="Leads & pipeline" subtitle="Van eerste contact tot ingeschreven lid" icon="funnel" />
+      <PageHeader title="Leads & pipeline" subtitle="Van eerste contact tot ingeschreven lid" icon="funnel"
+        actions={canWrite ? <NewLeadModal /> : undefined} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <StatCard label="Open leads" value={k.open_leads} icon="funnel" tone="indigo" sub="in pipeline" />
@@ -172,7 +176,7 @@ export default async function LeadsPage() {
         {leads.length === 0 ? (
           <EmptyState icon="funnel" title="Geen leads" />
         ) : (
-          <DataTable head={<><th>Lead</th><th>Bron</th><th>Discipline</th><th>Status</th><th className="text-right">Aangemaakt</th></>}>
+          <DataTable head={<><th>Lead</th><th>Bron</th><th>Discipline</th><th>Status</th><th className="text-right">Aangemaakt</th>{canWrite && <th className="text-right">Actie</th>}</>}>
             {leads.map((l) => (
               <tr key={l.id}>
                 <td>
@@ -185,6 +189,7 @@ export default async function LeadsPage() {
                 <td className="capitalize">{l.discipline?.replace(/_/g, " ") ?? "—"}</td>
                 <td><StatusBadge status={l.status} /></td>
                 <td className="text-right faint text-sm">{timeAgo(l.created_at)}</td>
+                {canWrite && <td className="text-right"><LeadRowActions leadId={l.id} status={l.status} /></td>}
               </tr>
             ))}
           </DataTable>
