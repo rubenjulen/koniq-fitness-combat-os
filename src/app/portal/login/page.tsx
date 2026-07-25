@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function PortalLogin() {
   if (await getMemberSession()) redirect("/portal");
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 hero-grad">
+    <div className="min-h-screen flex items-center justify-center p-6 combat-bg">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center"><LogoFull size={28} subtitle="Member app" /></div>
         <div className="card p-6">

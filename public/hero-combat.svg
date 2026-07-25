@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Muay Thai gym sfeerbeeld">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1a0b14"/>
+      <stop offset="0.55" stop-color="#100810"/>
+      <stop offset="1" stop-color="#08050b"/>
+    </linearGradient>
+    <radialGradient id="spot" cx="50%" cy="0%" r="75%">
+      <stop offset="0" stop-color="#e11d48" stop-opacity="0.34"/>
+      <stop offset="0.35" stop-color="#e11d48" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#e11d48" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="amberglow" cx="50%" cy="6%" r="55%">
+      <stop offset="0" stop-color="#f59e0b" stop-opacity="0.26"/>
+      <stop offset="1" stop-color="#f59e0b" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="fighter" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fbbf24"/>
+      <stop offset="0.5" stop-color="#f43f5e"/>
+      <stop offset="1" stop-color="#9f1239"/>
+    </linearGradient>
+    <radialGradient id="vignette" cx="50%" cy="45%" r="70%">
+      <stop offset="0" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="0.7" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.6"/>
+    </radialGradient>
+    <linearGradient id="bag" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#2a1620"/>
+      <stop offset="0.5" stop-color="#3a1f2c"/>
+      <stop offset="1" stop-color="#1a0e15"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <rect width="1600" height="900" fill="url(#spot)"/>
+  <rect width="1600" height="900" fill="url(#amberglow)"/>
+
+  <polygon points="800,-40 640,900 960,900" fill="#ffffff" opacity="0.04"/>
+
+  <g opacity="0.55">
+    <line x1="150" y1="90" x2="150" y2="200" stroke="#5b4a2a" stroke-width="4"/>
+    <path d="M120 200 q30 -18 60 0 l8 250 q-38 26 -76 0 z" fill="url(#bag)" stroke="#4a2b1e" stroke-width="2"/>
+    <rect x="120" y="196" width="60" height="14" rx="5" fill="#4a2b1e"/>
+    <line x1="1460" y1="80" x2="1460" y2="230" stroke="#5b4a2a" stroke-width="4"/>
+    <path d="M1425 230 q35 -20 70 0 l9 210 q-44 26 -88 0 z" fill="url(#bag)" stroke="#4a2b1e" stroke-width="2"/>
+    <rect x="1425" y="226" width="70" height="15" rx="5" fill="#4a2b1e"/>
+  </g>
+
+  <g opacity="0.5">
+    <rect x="52" y="700" width="20" height="150" rx="6" fill="#3a2130"/>
+    <rect x="1528" y="700" width="20" height="150" rx="6" fill="#3a2130"/>
+    <line x1="62" y1="726" x2="1538" y2="740" stroke="#e11d48" stroke-width="6" opacity="0.7" stroke-linecap="round"/>
+    <line x1="62" y1="770" x2="1538" y2="784" stroke="#f59e0b" stroke-width="5" opacity="0.55" stroke-linecap="round"/>
+    <line x1="62" y1="816" x2="1538" y2="830" stroke="#e11d48" stroke-width="6" opacity="0.7" stroke-linecap="round"/>
+  </g>
+
+  <g fill="none" stroke="url(#fighter)" stroke-width="30" stroke-linecap="round" stroke-linejoin="round" opacity="0.5">
+    <circle cx="300" cy="300" r="30" fill="url(#fighter)" stroke="none"/>
+    <path d="M305 340 L340 480"/>
+    <path d="M340 480 L330 600 L348 720"/>
+    <path d="M340 480 L440 470 L575 405"/>
+    <path d="M308 348 L268 412 L300 452"/>
+    <path d="M308 348 L362 360 L372 312"/>
+  </g>
+
+  <g fill="none" stroke="url(#fighter)" stroke-width="30" stroke-linecap="round" stroke-linejoin="round" opacity="0.42">
+    <circle cx="1235" cy="312" r="30" fill="url(#fighter)" stroke="none"/>
+    <path d="M1228 352 L1200 486"/>
+    <path d="M1200 486 L1168 600 L1150 726"/>
+    <path d="M1200 486 L1258 588 L1302 720"/>
+    <path d="M1226 356 L1190 360 L1202 314"/>
+    <path d="M1226 356 L1268 376 L1252 320"/>
+  </g>
+
+  <rect x="0" y="760" width="1600" height="140" fill="#000000" opacity="0.25"/>
+  <rect width="1600" height="900" fill="url(#vignette)"/>
+</svg>

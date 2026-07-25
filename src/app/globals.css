@@ -144,3 +144,28 @@ body {
 
 /* marketing / landing helpers */
 .hero-grad { background: radial-gradient(1200px 600px at 70% -10%, rgba(225,29,72,0.18), transparent 60%), radial-gradient(900px 500px at 10% 10%, rgba(245,158,11,0.12), transparent 55%); }
+
+/* Combat-scene achtergrond — altijd donker (thema-onafhankelijk), lichte tekst erop. */
+.combat-bg {
+  position: relative;
+  isolation: isolate;
+  background:
+    linear-gradient(180deg, rgba(8,5,11,0.78) 0%, rgba(8,5,11,0.72) 55%, rgba(8,5,11,0.9) 100%),
+    url('/hero-combat.svg');
+  background-size: cover;
+  background-position: center 30%;
+  color: #f4eef2;
+}
+.combat-bg .muted { color: rgba(244,238,242,0.72); }
+.combat-bg .faint { color: rgba(244,238,242,0.5); }
+/* subtiele film-grain / mat-textuur over de scène */
+.combat-bg::before {
+  content: "";
+  position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+  background-size: 4px 4px;
+  opacity: 0.4;
+  mix-blend-mode: overlay;
+}
+/* leesbaarheids-scrim direct achter de tekstkolom */
+.combat-scrim { background: radial-gradient(60% 55% at 50% 45%, rgba(8,5,11,0.55), transparent 75%); }

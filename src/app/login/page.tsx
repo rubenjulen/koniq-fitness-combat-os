@@ -12,17 +12,17 @@ export default async function LoginPage() {
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
-      <div className="hidden lg:flex flex-col justify-between p-10 hero-grad" style={{ background: "var(--bg-elevated)" }}>
+      <div className="hidden lg:flex flex-col justify-between p-10 combat-bg">
         <LogoFull size={30} />
         <div>
-          <h1 className="text-3xl font-extrabold leading-tight tracking-tight" style={{ color: "var(--text)" }}>
-            Eén member.<br />Eén platform.<br /><span className="tprimary">Volledige controle.</span>
+          <h1 className="text-3xl font-extrabold leading-tight tracking-tight" style={{ color: "#fff", textShadow: "0 2px 24px rgba(0,0,0,0.5)" }}>
+            Eén member.<br />Eén platform.<br /><span style={{ color: "#fb7185" }}>Volledige controle.</span>
           </h1>
-          <p className="muted mt-4 max-w-sm">
+          <p className="mt-4 max-w-sm" style={{ color: "rgba(244,238,242,0.78)" }}>
             Van eerste lead tot zwarte band: leden, betalingen, agenda, attendance, curriculum, fighters en coaching in één systeem.
           </p>
         </div>
-        <p className="text-xs faint">KoniQ Fitness &amp; Combat Sports OS · Suriname</p>
+        <p className="text-xs" style={{ color: "rgba(244,238,242,0.5)" }}>KoniQ Fitness &amp; Combat Sports OS · Suriname</p>
       </div>
 
       <div className="flex items-center justify-center p-6">

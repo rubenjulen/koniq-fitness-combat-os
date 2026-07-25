@@ -37,28 +37,28 @@ export default function Landing() {
       </header>
 
       {/* hero */}
-      <section className="hero-grad">
-        <div className="max-w-6xl mx-auto px-5 py-20 lg:py-28 text-center">
-          <span className="badge mb-5" style={{ background: "var(--brand-soft)", color: "var(--brand)", borderColor: "transparent" }}>
+      <section className="combat-bg">
+        <div className="max-w-6xl mx-auto px-5 py-20 lg:py-32 text-center">
+          <span className="badge mb-5" style={{ background: "rgba(225,29,72,0.18)", color: "#fda4af", borderColor: "rgba(225,29,72,0.4)" }}>
             <Icon name="fire" size={13} /> Voor kickboks-, Muay Thai- & fitnessscholen in Suriname
           </span>
-          <h1 className="text-4xl lg:text-6xl font-extrabold tracking-tight leading-[1.05] max-w-4xl mx-auto">
-            Eén platform voor je hele sportschool.<br /><span className="tprimary">Van eerste lead tot zwarte band.</span>
+          <h1 className="text-4xl lg:text-6xl font-extrabold tracking-tight leading-[1.05] max-w-4xl mx-auto" style={{ color: "#fff", textShadow: "0 2px 30px rgba(0,0,0,0.5)" }}>
+            Eén platform voor je hele sportschool.<br /><span style={{ color: "#fb7185" }}>Van eerste lead tot zwarte band.</span>
           </h1>
-          <p className="text-lg muted mt-6 max-w-2xl mx-auto">
+          <p className="text-lg mt-6 max-w-2xl mx-auto" style={{ color: "rgba(244,238,242,0.82)" }}>
             Geen losse apps meer voor agenda, betalingen, workouts en social media. Website, CRM, leden, betalingen,
             attendance, curriculum, fighters, coaching en AI — rond één member-core.
           </p>
           <div className="flex items-center justify-center gap-3 mt-8">
             <Link href="/login" className="btn btn-primary">Bekijk de demo <Icon name="arrowRight" size={16} /></Link>
-            <a href="#pricing" className="btn btn-secondary">Edities & prijzen</a>
+            <a href="#pricing" className="btn" style={{ background: "rgba(255,255,255,0.1)", color: "#fff", borderColor: "rgba(255,255,255,0.2)" }}>Edities & prijzen</a>
           </div>
           {/* value chain */}
           <div className="mt-14 flex flex-wrap items-center justify-center gap-2 max-w-4xl mx-auto">
             {chain.map((c, i) => (
               <span key={c} className="inline-flex items-center gap-2">
-                <span className="badge">{c}</span>
-                {i < chain.length - 1 && <Icon name="chevronRight" size={13} className="faint" />}
+                <span className="badge" style={{ background: "rgba(255,255,255,0.08)", color: "rgba(244,238,242,0.9)", borderColor: "rgba(255,255,255,0.14)" }}>{c}</span>
+                {i < chain.length - 1 && <Icon name="chevronRight" size={13} style={{ color: "rgba(244,238,242,0.4)" }} />}
               </span>
             ))}
           </div>
@@ -136,14 +136,14 @@ export default function Landing() {
       </section>
 
       {/* motto / CTA */}
-      <section className="border-t" style={{ background: "var(--bg-elevated)" }}>
-        <div className="max-w-4xl mx-auto px-5 py-20 text-center">
-          <Icon name="belt" size={30} className="tprimary mx-auto" />
-          <p className="text-2xl lg:text-3xl font-bold mt-4 leading-snug">
+      <section className="border-t combat-bg">
+        <div className="max-w-4xl mx-auto px-5 py-24 text-center">
+          <Icon name="belt" size={30} style={{ color: "#fb7185" }} className="mx-auto" />
+          <p className="text-2xl lg:text-3xl font-bold mt-4 leading-snug" style={{ color: "#fff" }}>
             &ldquo;Eén member. Eén account. Eén betaalhistorie. Eén trainings- en progressieprofiel.
-            <span className="tprimary"> Eén platform voor de volledige sportschool.</span>&rdquo;
+            <span style={{ color: "#fb7185" }}> Eén platform voor de volledige sportschool.</span>&rdquo;
           </p>
-          <p className="muted mt-4 font-semibold uppercase tracking-wider text-sm">KoniQ — in control, van mat tot management.</p>
+          <p className="mt-4 font-semibold uppercase tracking-wider text-sm" style={{ color: "rgba(244,238,242,0.6)" }}>KoniQ — in control, van mat tot management.</p>
           <div className="mt-8"><Link href="/login" className="btn btn-primary">Bekijk de demo <Icon name="arrowRight" size={16} /></Link></div>
         </div>
       </section>
