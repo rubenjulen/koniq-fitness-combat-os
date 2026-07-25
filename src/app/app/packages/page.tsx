@@ -3,6 +3,8 @@ import { query } from "@/db/client";
 import { PageHeader, Card, StatCard, Section, DataTable, Badge, EmptyState, FeatureLocked } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { money, titleCase } from "@/lib/format";
+import { can } from "@/lib/rbac";
+import { NewPackageModal } from "./NewPackageModal";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +42,7 @@ export default async function PackagesPage() {
   if (!user.ok) return <FeatureLocked feature="Packages & memberships" pack="starter" />;
   const t = user.tenantId;
   const cur = user.tenant.currency;
+  const canWrite = can(user, "package.write");
 
   const [packages, totals] = await Promise.all([
     query<Pkg>(
@@ -74,7 +77,7 @@ export default async function PackagesPage() {
 
   return (
     <>
-      <PageHeader title="Pakketten & lidmaatschappen" subtitle="Abonnementen, rittenkaarten en prijsstelling" icon="tag" />
+      <PageHeader title="Pakketten & lidmaatschappen" subtitle="Abonnementen, rittenkaarten en prijsstelling" icon="tag" actions={canWrite ? <NewPackageModal /> : undefined} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <StatCard label="Actieve pakketten" value={kpi.total_packages} icon="tag" tone="brand" />

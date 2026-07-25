@@ -3,6 +3,10 @@ import { query } from "@/db/client";
 import { PageHeader, Card, StatCard, Section, DataTable, StatusBadge, Badge, EmptyState, FeatureLocked } from "@/components/ui";
 import { dateNL, timeAgo, titleCase } from "@/lib/format";
 import { Icon } from "@/components/icons";
+import { can } from "@/lib/rbac";
+import { SubmitButton } from "@/components/FormControls";
+import { NewEquipmentModal } from "./NewEquipmentModal";
+import { resolveTicket } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +56,7 @@ export default async function FacilityPage() {
   const user = await guard({ feature: "facility", cap: "facility.read" });
   if (!user.ok) return <FeatureLocked feature="Faciliteiten" pack="starter" />;
   const t = user.tenantId;
+  const canWrite = can(user, "facility.write");
 
   const [locations, equipment, tickets, kpiRows] = await Promise.all([
     query<LocationRow>(
@@ -92,7 +97,8 @@ export default async function FacilityPage() {
 
   return (
     <>
-      <PageHeader title="Faciliteiten" subtitle="Locaties, materiaal en onderhoud" icon="building" />
+      <PageHeader title="Faciliteiten" subtitle="Locaties, materiaal en onderhoud" icon="building"
+        actions={canWrite ? <NewEquipmentModal locations={locations} /> : undefined} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <StatCard label="Locaties" value={k.locations} icon="mapPin" tone="brand" />
@@ -154,7 +160,7 @@ export default async function FacilityPage() {
         {tickets.length === 0 ? (
           <Card><p className="text-sm muted">Geen onderhoudsmeldingen.</p></Card>
         ) : (
-          <DataTable head={<><th>Melding</th><th>Prioriteit</th><th>Status</th><th>Materiaal</th><th className="text-right">Aangemaakt</th></>}>
+          <DataTable head={<><th>Melding</th><th>Prioriteit</th><th>Status</th><th>Materiaal</th><th className="text-right">Aangemaakt</th>{canWrite && <th className="text-right">Actie</th>}</>}>
             {tickets.map((mt) => (
               <tr key={mt.id}>
                 <td className="font-medium">{mt.title}</td>
@@ -164,6 +170,16 @@ export default async function FacilityPage() {
                 <td className="text-right faint text-sm">
                   {mt.resolved_at ? `opgelost ${dateNL(mt.resolved_at)}` : timeAgo(mt.created_at)}
                 </td>
+                {canWrite && (
+                  <td className="text-right">
+                    {mt.status !== "resolved" && (
+                      <form action={resolveTicket} className="inline-flex justify-end">
+                        <input type="hidden" name="ticketId" value={mt.id} />
+                        <SubmitButton icon="check" variant="secondary" className="btn-sm">Sluiten</SubmitButton>
+                      </form>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </DataTable>

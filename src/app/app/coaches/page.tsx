@@ -3,6 +3,8 @@ import { query } from "@/db/client";
 import { PageHeader, Card, StatCard, Section, DataTable, Badge, StatusBadge, Avatar, EmptyState, FeatureLocked } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { money, dateNL, titleCase } from "@/lib/format";
+import { can } from "@/lib/rbac";
+import { NewCoachModal } from "./NewCoachModal";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +31,7 @@ export default async function CoachesPage() {
   if (!user.ok) return <FeatureLocked feature="Coaches & staff" pack="starter" />;
   const t = user.tenantId;
   const cur = user.tenant.currency;
+  const canWrite = can(user, "coach.write");
 
   const [coaches, quals, classCounts, confirmed] = await Promise.all([
     query<CoachRow>(
@@ -84,7 +87,7 @@ export default async function CoachesPage() {
 
   return (
     <>
-      <PageHeader title="Coaches & staff" subtitle="Roster, kwalificaties en inzet" icon="whistle" />
+      <PageHeader title="Coaches & staff" subtitle="Roster, kwalificaties en inzet" icon="whistle" actions={canWrite ? <NewCoachModal /> : undefined} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <StatCard label="Totaal coaches" value={totalCoaches} icon="whistle" tone="brand" />

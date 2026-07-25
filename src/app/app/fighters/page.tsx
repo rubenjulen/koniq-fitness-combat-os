@@ -3,6 +3,8 @@ import { query } from "@/db/client";
 import { PageHeader, Card, StatCard, Section, DataTable, StatusBadge, Badge, Avatar, EmptyState, FeatureLocked } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { money, dateNL, fullName, titleCase, pct } from "@/lib/format";
+import { can } from "@/lib/rbac";
+import { AddFightModal } from "./AddFightModal";
 
 export const dynamic = "force-dynamic";
 
@@ -123,6 +125,8 @@ export default async function FightersPage() {
   ]);
 
   const kpi = kpiRows[0];
+  const canWrite = can(user, "fighter.write");
+  const fighterOpts = fighters.map((f) => ({ id: f.id, name: fullName(f) }));
   const decided = (kpi?.wins ?? 0) + (kpi?.losses ?? 0) + (kpi?.draws ?? 0);
   const winRate = decided > 0 ? Math.round(((kpi?.wins ?? 0) / decided) * 100) : 0;
 
@@ -142,6 +146,11 @@ export default async function FightersPage() {
         title="Fighters & competitie"
         subtitle="Fight-team cockpit: roster, records, weight cuts en medische docs"
         icon="trophy"
+        actions={canWrite ? (
+          <div className="flex items-center gap-2">
+            <AddFightModal fighters={fighterOpts} />
+          </div>
+        ) : undefined}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">

@@ -1,8 +1,11 @@
 import { guard } from "@/lib/guard";
 import { query } from "@/db/client";
+import { can } from "@/lib/rbac";
 import { PageHeader, Card, StatCard, Section, DataTable, StatusBadge, Badge, Avatar, EmptyState, Progress, FeatureLocked } from "@/components/ui";
 import { money, dateNL, timeAgo, fullName, titleCase, pct } from "@/lib/format";
 import Link from "next/link";
+import { RegisterModal } from "./EventActions";
+import { toggleRegistrationPaid } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -48,8 +51,9 @@ export default async function EventsPage() {
   if (!user.ok) return <FeatureLocked feature="Events" pack="pro" />;
   const t = user.tenantId;
   const cur = user.tenant.currency;
+  const canWrite = can(user, "event.write");
 
-  const [events, regs, kpiRows] = await Promise.all([
+  const [events, regs, kpiRows, memberOpts] = await Promise.all([
     query<EventRow>(
       `SELECT e.id, e.name, e.type, e.start_date, e.capacity,
               e.member_price::float AS member_price, e.nonmember_price::float AS nonmember_price, e.status,
@@ -80,9 +84,16 @@ export default async function EventsPage() {
          (SELECT count(*)::int FROM event_registrations WHERE tenant_id = $1 AND status <> 'cancelled') AS regs`,
       [t]
     ),
+    query<{ id: string; first_name: string; last_name: string }>(
+      `SELECT id, first_name, last_name FROM members
+        WHERE tenant_id = $1 AND status <> 'cancelled'
+        ORDER BY first_name, last_name`,
+      [t]
+    ),
   ]);
 
   const k = kpiRows[0] ?? { upcoming: 0, regs: 0 };
+  const eventOpts = events.map((e) => ({ id: e.id, name: e.name }));
   const revenue = events.reduce((sum, e) => sum + e.paid_count * (e.member_price ?? 0), 0);
   const withCap = events.filter((e) => (e.capacity ?? 0) > 0);
   const avgFill = withCap.length
@@ -91,7 +102,12 @@ export default async function EventsPage() {
 
   return (
     <>
-      <PageHeader title="Events" subtitle="Seminars, kampen, gradings en fight nights" icon="calendar" />
+      <PageHeader
+        title="Events"
+        subtitle="Seminars, kampen, gradings en fight nights"
+        icon="calendar"
+        actions={canWrite ? <RegisterModal events={eventOpts} members={memberOpts} /> : undefined}
+      />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <StatCard label="Aankomende events" value={k.upcoming} icon="calendar" tone="brand" />
@@ -164,7 +180,18 @@ export default async function EventsPage() {
                   </td>
                   <td className="text-sm">{r.event_name ?? <span className="faint">—</span>}</td>
                   <td><StatusBadge status={r.status} /></td>
-                  <td>{r.paid ? <Badge tone="green">betaald</Badge> : <Badge tone="amber">open</Badge>}</td>
+                  <td>
+                    {canWrite ? (
+                      <form action={toggleRegistrationPaid}>
+                        <input type="hidden" name="id" value={r.id} />
+                        <button type="submit" className="btn btn-ghost btn-sm" style={{ padding: 0, background: "none" }} title="Betaalstatus wisselen">
+                          {r.paid ? <Badge tone="green">betaald</Badge> : <Badge tone="amber">open</Badge>}
+                        </button>
+                      </form>
+                    ) : (
+                      r.paid ? <Badge tone="green">betaald</Badge> : <Badge tone="amber">open</Badge>
+                    )}
+                  </td>
                   <td className="text-right faint text-sm">{timeAgo(r.created_at)}</td>
                 </tr>
               );

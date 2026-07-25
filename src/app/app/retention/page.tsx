@@ -2,6 +2,10 @@ import { guard } from "@/lib/guard";
 import { query } from "@/db/client";
 import { PageHeader, Card, StatCard, Section, DataTable, StatusBadge, Badge, Avatar, EmptyState, FeatureLocked } from "@/components/ui";
 import { dateNL, timeAgo, fullName, titleCase } from "@/lib/format";
+import { can } from "@/lib/rbac";
+import { SubmitButton } from "@/components/FormControls";
+import { NewTaskModal } from "./NewTaskModal";
+import { completeTask } from "./actions";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -46,8 +50,9 @@ export default async function RetentionPage() {
   const user = await guard({ feature: "retention", cap: "retention.read" });
   if (!user.ok) return <FeatureLocked feature="Retentie" pack="pro" />;
   const t = user.tenantId;
+  const canWrite = can(user, "retention.write");
 
-  const [tasks, kpiRows, byReason, churn] = await Promise.all([
+  const [tasks, kpiRows, byReason, churn, members] = await Promise.all([
     query<TaskRow>(
       `SELECT rt.id, rt.type, rt.reason, rt.status, rt.due_date, rt.note, rt.created_at,
               m.id AS member_id, m.first_name, m.last_name, m.photo_url,
@@ -92,13 +97,18 @@ export default async function RetentionPage() {
         ORDER BY m.created_at DESC LIMIT 20`,
       [t]
     ),
+    query<{ id: string; first_name: string | null; last_name: string | null }>(
+      `SELECT id, first_name, last_name FROM members WHERE tenant_id = $1 ORDER BY first_name, last_name`,
+      [t]
+    ),
   ]);
 
   const k = kpiRows[0] ?? { open_tasks: 0, at_risk: 0, freeze_recovery: 0, winback: 0 };
 
   return (
     <>
-      <PageHeader title="Retentie" subtitle="Behoud leden: at-risk signalen, freeze recovery en win-back" icon="heart" />
+      <PageHeader title="Retentie" subtitle="Behoud leden: at-risk signalen, freeze recovery en win-back" icon="heart"
+        actions={canWrite ? <NewTaskModal members={members} /> : undefined} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <StatCard label="Open retentietaken" value={k.open_tasks} icon="clipboard" tone="brand" sub="te behandelen" />
@@ -120,6 +130,7 @@ export default async function RetentionPage() {
                 <th>Status</th>
                 <th>Deadline</th>
                 <th>Eigenaar</th>
+                {canWrite && <th className="text-right">Actie</th>}
               </>
             }
           >
@@ -143,6 +154,16 @@ export default async function RetentionPage() {
                 <td><StatusBadge status={row.status} /></td>
                 <td className="muted text-sm">{dateNL(row.due_date)}</td>
                 <td className="muted text-sm">{row.owner_name ?? <span className="faint">Niet toegewezen</span>}</td>
+                {canWrite && (
+                  <td className="text-right">
+                    {row.status !== "done" && (
+                      <form action={completeTask} className="inline-flex justify-end">
+                        <input type="hidden" name="taskId" value={row.id} />
+                        <SubmitButton icon="check" variant="secondary" className="btn-sm">Afronden</SubmitButton>
+                      </form>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </DataTable>

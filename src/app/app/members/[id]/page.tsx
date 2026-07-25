@@ -3,6 +3,10 @@ import { query, queryOne } from "@/db/client";
 import { PageHeader, Card, Section, StatusBadge, Badge, Avatar, EmptyState, InfoRow, RiskBadge, Progress, LinkButton, FeatureLocked } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { money, dateNL, timeAgo, age, fullName, titleCase } from "@/lib/format";
+import { can } from "@/lib/rbac";
+import { freezeMembership } from "../actions";
+import { StatusChanger, AddEmergencyContactModal } from "./MemberDetailActions";
+import { SubmitButton } from "@/components/FormControls";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -62,6 +66,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   if (!user.ok) return <FeatureLocked feature="Members" pack="starter" />;
   const t = user.tenantId;
   const cur = user.tenant.currency;
+  const canWrite = can(user, "member.write");
 
   const member = await queryOne<Member>(
     `SELECT m.id, m.first_name, m.last_name, m.member_no, m.status, m.dob, m.gender, m.email, m.phone,
@@ -196,6 +201,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
               <StatusBadge status={member.status} />
               {member.is_minor && <Badge tone="purple">jeugd</Badge>}
               {screening && <RiskBadge risk={screening.risk_flag} />}
+              {canWrite && <StatusChanger memberId={member.id} status={member.status} />}
             </div>
             <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm muted">
               {member.phone && <span className="inline-flex items-center gap-1.5"><Icon name="phone" size={14} />{member.phone}</span>}
@@ -248,6 +254,15 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
                 <InfoRow label="Volgende incasso">{dateNL(membership.next_bill_date)}</InfoRow>
                 {membership.credits_remaining != null && <InfoRow label="Resterende credits">{membership.credits_remaining}</InfoRow>}
                 <InfoRow label="Auto-verlengen">{membership.auto_renew ? "Ja" : "Nee"}</InfoRow>
+                {canWrite && (membership.status === "active" || membership.status === "frozen") && (
+                  <form action={freezeMembership} className="mt-3 pt-3 border-t" style={{ borderColor: "var(--border)" }}>
+                    <input type="hidden" name="membershipId" value={membership.id} />
+                    <input type="hidden" name="memberId" value={member.id} />
+                    <SubmitButton icon={membership.status === "frozen" ? "bolt" : "clock"} variant="secondary" className="btn-sm">
+                      {membership.status === "frozen" ? "Reactiveren" : "Bevriezen"}
+                    </SubmitButton>
+                  </form>
+                )}
               </Card>
             ) : (
               <EmptyState icon="tag" title="Geen actief lidmaatschap" subtitle="Dit lid heeft nog geen pakket gekoppeld." />
@@ -277,7 +292,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
             </Section>
           )}
 
-          <Section title="Noodcontacten">
+          <Section title="Noodcontacten" actions={canWrite ? <AddEmergencyContactModal memberId={member.id} /> : undefined}>
             {emergency.length === 0 ? (
               <EmptyState icon="phone" title="Geen noodcontact" subtitle="Voeg minimaal één noodcontact toe." />
             ) : (

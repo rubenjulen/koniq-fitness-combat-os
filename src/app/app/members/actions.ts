@@ -82,3 +82,41 @@ export async function setMemberStatus(formData: FormData) {
   revalidatePath(`/app/members/${memberId}`);
   revalidatePath("/app/members");
 }
+
+/** Add an emergency contact to a member. */
+export async function addEmergencyContact(formData: FormData) {
+  const user = await requireSession();
+  if (!can(user, "member.write")) throw new Error("Geen rechten.");
+  const t = user.tenantId;
+  const memberId = String(formData.get("memberId") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!memberId || !name) throw new Error("Naam is verplicht.");
+  const relationship = String(formData.get("relationship") ?? "").trim() || null;
+  const phone = String(formData.get("phone") ?? "").trim() || null;
+  const medicalNote = String(formData.get("medical_note") ?? "").trim() || null;
+  await query(
+    `INSERT INTO emergency_contacts (id, tenant_id, member_id, name, relationship, phone, medical_note)
+     VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+    [randomUUID(), t, memberId, name, relationship, phone, medicalNote]
+  );
+  revalidatePath(`/app/members/${memberId}`);
+}
+
+/** Toggle a membership between active and frozen (30-day freeze). */
+export async function freezeMembership(formData: FormData) {
+  const user = await requireSession();
+  if (!can(user, "member.write")) throw new Error("Geen rechten.");
+  const t = user.tenantId;
+  const membershipId = String(formData.get("membershipId") ?? "");
+  const memberId = String(formData.get("memberId") ?? "");
+  if (!membershipId) return;
+  await query(
+    `UPDATE memberships
+        SET status = CASE WHEN status='frozen' THEN 'active' ELSE 'frozen' END,
+            freeze_until = CASE WHEN status='frozen' THEN NULL ELSE current_date + interval '30 days' END
+      WHERE id=$1 AND tenant_id=$2`,
+    [membershipId, t]
+  );
+  if (memberId) revalidatePath(`/app/members/${memberId}`);
+  revalidatePath("/app/members");
+}

@@ -3,6 +3,8 @@ import { query } from "@/db/client";
 import { PageHeader, Card, StatCard, Section, DataTable, StatusBadge, RiskBadge, Badge, Avatar, EmptyState, FeatureLocked } from "@/components/ui";
 import { dateNL, timeAgo, fullName, titleCase } from "@/lib/format";
 import { Icon } from "@/components/icons";
+import { can } from "@/lib/rbac";
+import { LogIncidentModal } from "./LogIncidentModal";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -49,8 +51,9 @@ export default async function HealthPage() {
   const user = await guard({ feature: "health_safety", cap: "health.read" });
   if (!user.ok) return <FeatureLocked feature="Gezondheid & veiligheid" pack="starter" />;
   const t = user.tenantId;
+  const canWrite = can(user, "health.write");
 
-  const [screenings, flags, incidents, kpiRows] = await Promise.all([
+  const [screenings, flags, incidents, kpiRows, locations, members] = await Promise.all([
     query<ScreeningRow>(
       `SELECT hs.id, hs.risk_flag, hs.cleared_at, hs.note, hs.created_at,
               m.id AS member_id, m.first_name, m.last_name, m.photo_url
@@ -83,13 +86,22 @@ export default async function HealthPage() {
          (SELECT count(*)::int FROM incidents WHERE tenant_id = $1 AND status <> 'resolved') AS open_incidents`,
       [t]
     ),
+    query<{ id: string; name: string }>(
+      `SELECT id, name FROM locations WHERE tenant_id = $1 ORDER BY name`,
+      [t]
+    ),
+    query<{ id: string; first_name: string | null; last_name: string | null }>(
+      `SELECT id, first_name, last_name FROM members WHERE tenant_id = $1 ORDER BY first_name, last_name`,
+      [t]
+    ),
   ]);
 
   const k = kpiRows[0] ?? { screenings: 0, red_flags: 0, medical: 0, open_incidents: 0 };
 
   return (
     <>
-      <PageHeader title="Gezondheid & veiligheid" subtitle="Screening, medische aandachtspunten en incidenten" icon="shield" />
+      <PageHeader title="Gezondheid & veiligheid" subtitle="Screening, medische aandachtspunten en incidenten" icon="shield"
+        actions={canWrite ? <LogIncidentModal locations={locations} members={members} /> : undefined} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <StatCard label="Screenings" value={k.screenings} icon="scan" tone="brand" />

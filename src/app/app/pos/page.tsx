@@ -1,8 +1,10 @@
 import { guard } from "@/lib/guard";
 import { query } from "@/db/client";
+import { can } from "@/lib/rbac";
 import { PageHeader, Card, StatCard, Section, DataTable, Badge, Avatar, EmptyState, FeatureLocked } from "@/components/ui";
 import { money, timeAgo, fullName, titleCase } from "@/lib/format";
 import Link from "next/link";
+import { QuickSaleModal } from "./QuickSaleModal";
 
 export const dynamic = "force-dynamic";
 
@@ -44,8 +46,9 @@ export default async function PosPage() {
   if (!user.ok) return <FeatureLocked feature="Kassa & retail" pack="pro" />;
   const t = user.tenantId;
   const cur = user.tenant.currency;
+  const canWrite = can(user, "pos.write");
 
-  const [products, sales, top, kpiRows] = await Promise.all([
+  const [products, sales, top, kpiRows, memberOpts] = await Promise.all([
     query<ProductRow>(
       `SELECT id, name, category, price::float AS price, tax_pct::float AS tax_pct, stock, reorder_level
          FROM products WHERE tenant_id = $1 AND active
@@ -86,13 +89,25 @@ export default async function PosPage() {
             WHERE tenant_id = $1 AND active AND stock <= reorder_level) AS low_stock`,
       [t]
     ),
+    query<{ id: string; first_name: string; last_name: string }>(
+      `SELECT id, first_name, last_name FROM members
+        WHERE tenant_id = $1 AND status <> 'cancelled'
+        ORDER BY first_name, last_name`,
+      [t]
+    ),
   ]);
 
   const k = kpiRows[0] ?? { revenue: 0, txns: 0, avg_ticket: 0, low_stock: 0 };
+  const productOpts = products.map((p) => ({ id: p.id, name: p.name, price: p.price ?? 0, stock: p.stock ?? 0 }));
 
   return (
     <>
-      <PageHeader title="Kassa & retail" subtitle="Verkoop, voorraad en producten" icon="cart" />
+      <PageHeader
+        title="Kassa & retail"
+        subtitle="Verkoop, voorraad en producten"
+        icon="cart"
+        actions={canWrite ? <QuickSaleModal products={productOpts} members={memberOpts} /> : undefined}
+      />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <StatCard label="Omzet deze maand" value={money(k.revenue, cur)} icon="coins" tone="green" />

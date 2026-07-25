@@ -3,6 +3,8 @@ import { query } from "@/db/client";
 import { PageHeader, Card, StatCard, Section, StatusBadge, Badge, Avatar, EmptyState, FeatureLocked } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { dateNL, fullName, titleCase } from "@/lib/format";
+import { can } from "@/lib/rbac";
+import { AwardPromotionModal, ScheduleGradingModal } from "./CurriculumActions";
 
 export const dynamic = "force-dynamic";
 
@@ -125,6 +127,24 @@ export default async function CurriculumPage() {
 
   const kpi = kpiRows[0];
 
+  // Write-flow data (only needed for the action modals)
+  const canWrite = can(user, "curriculum.write");
+  let members: { id: string; first_name: string | null; last_name: string | null }[] = [];
+  let coaches: { id: string; name: string }[] = [];
+  if (canWrite) {
+    [members, coaches] = await Promise.all([
+      query<{ id: string; first_name: string | null; last_name: string | null }>(
+        `SELECT id, first_name, last_name FROM members WHERE tenant_id=$1 ORDER BY last_name, first_name`,
+        [t],
+      ),
+      query<{ id: string; name: string }>(
+        `SELECT id, name FROM coaches WHERE tenant_id=$1 AND active=true ORDER BY name`,
+        [t],
+      ),
+    ]);
+  }
+  const rankOpts = ranks.map((r) => ({ id: r.id, name: r.name }));
+
   // Ranks grouped by discipline (belt ladder per discipline)
   const rankGroups = new Map<string, RankRow[]>();
   for (const r of ranks) {
@@ -144,6 +164,12 @@ export default async function CurriculumPage() {
         title="Curriculum & ranks"
         subtitle="Techniekbibliotheek, belt-progressie, gradings en promoties"
         icon="belt"
+        actions={canWrite ? (
+          <div className="flex items-center gap-2">
+            <AwardPromotionModal members={members} ranks={rankOpts} coaches={coaches} />
+            <ScheduleGradingModal members={members} coaches={coaches} />
+          </div>
+        ) : undefined}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
