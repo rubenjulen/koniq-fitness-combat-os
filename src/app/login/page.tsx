@@ -31,10 +31,20 @@ export default async function LoginPage() {
           <h2 className="text-xl font-bold mb-1">Inloggen</h2>
           <p className="text-sm muted mb-6">Log in op het beheerplatform van je sportschool.</p>
           <LoginForm />
-          <div className="mt-6 p-3 rounded-lg text-xs muted" style={{ background: "var(--bg-subtle)" }}>
-            <p className="font-semibold mb-1" style={{ color: "var(--text)" }}>Demo-toegang</p>
-            <p>owner@demo.koniq · receptie@demo.koniq · coach@demo.koniq</p>
-            <p>Wachtwoord: <code>demo12345</code></p>
+          <div className="mt-6 card p-3.5">
+            <p className="text-xs font-semibold faint uppercase tracking-wide mb-2">Demo-accounts · wachtwoord <code>demo12345</code></p>
+            <div className="space-y-1">
+              {[
+                ["owner@demo.koniq", "Ravi — Eigenaar"],
+                ["receptie@demo.koniq", "Priya — Receptie"],
+                ["coach@demo.koniq", "Kenji — Coach"],
+              ].map(([email, role]) => (
+                <div key={email} className="flex items-center justify-between text-sm">
+                  <span className="font-mono text-xs">{email}</span>
+                  <span className="faint text-xs">{role}</span>
+                </div>
+              ))}
+            </div>
           </div>
           <p className="mt-6 text-sm muted text-center">
             <Link href="/" className="link">&larr; Terug naar de website</Link>
