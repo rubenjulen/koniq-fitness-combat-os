@@ -35,7 +35,8 @@ export default async function LoginPage() {
             <p className="text-xs font-semibold faint uppercase tracking-wide mb-2">Demo-accounts · wachtwoord <code>demo12345</code></p>
             <div className="space-y-1">
               {[
-                ["owner@demo.koniq", "Ravi — Eigenaar"],
+                ["admin@koniq.app", "KoniQ platform-admin"],
+                ["owner@demo.koniq", "Ravi — Eigenaar (klant)"],
                 ["receptie@demo.koniq", "Priya — Receptie"],
                 ["coach@demo.koniq", "Kenji — Coach"],
               ].map(([email, role]) => (
@@ -44,6 +45,9 @@ export default async function LoginPage() {
                   <span className="faint text-xs">{role}</span>
                 </div>
               ))}
+            </div>
+            <div className="mt-2.5 pt-2.5 border-t text-xs muted" style={{ borderColor: "var(--border)" }}>
+              Lid/klant-app? Log in via de <Link href="/portal/login" className="link">member-app →</Link> (bv. <span className="font-mono">jason@example.sr</span>)
             </div>
           </div>
           <p className="mt-6 text-sm muted text-center">

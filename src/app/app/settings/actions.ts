@@ -49,3 +49,24 @@ export async function updateBrand(formData: FormData) {
     [name, JSON.stringify({ ...(user.tenant.brand as object), tagline, primary, accent }), user.tenantId]);
   revalidatePath("/app", "layout");
 }
+
+/** Add a new location (vestiging) for this tenant. */
+export async function createLocation(formData: FormData) {
+  const user = await requireOwner();
+  const t = user.tenantId;
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) throw new Error("Naam is verplicht.");
+  const address = String(formData.get("address") ?? "").trim() || null;
+  const district = String(formData.get("district") ?? "").trim() || null;
+  const ressort = String(formData.get("ressort") ?? "").trim() || null;
+  const phone = String(formData.get("phone") ?? "").trim() || null;
+  const capRaw = String(formData.get("capacity") ?? "").trim();
+  const capacity = capRaw ? parseInt(capRaw, 10) : null;
+  const isHq = String(formData.get("is_headquarters") ?? "false") === "true";
+  await query(
+    `INSERT INTO locations (id, tenant_id, name, address, district, ressort, phone, capacity, is_headquarters)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+    [randomUUID(), t, name, address, district, ressort, phone, Number.isNaN(capacity as number) ? null : capacity, isHq]
+  );
+  revalidatePath("/app/settings");
+}

@@ -64,6 +64,7 @@ export const NAV: NavGroup[] = [
       { href: "/app/finance", label: "Finance", icon: "chart", cap: "finance.read", feature: "finance", pack: "pro" },
       { href: "/app/analytics", label: "Analytics & BI", icon: "bars", cap: "analytics.read", feature: "analytics", pack: "enterprise" },
       { href: "/app/integrations", label: "Integraties & API", icon: "plug", cap: "settings.read", feature: "integrations", pack: "enterprise" },
+      { href: "/app/team", label: "Team & gebruikers", icon: "users", cap: "settings.write" },
       { href: "/app/settings", label: "Instellingen & edities", icon: "settings", cap: "*" },
     ],
   },

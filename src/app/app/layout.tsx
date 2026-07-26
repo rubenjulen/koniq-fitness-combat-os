@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireSession } from "@/lib/auth";
+import { requireSession, isImpersonating } from "@/lib/auth";
 import { can } from "@/lib/rbac";
 import { NAV } from "@/lib/nav";
 import { loadFeatures } from "@/lib/entitlements";
@@ -8,11 +8,14 @@ import { Sidebar } from "@/components/Sidebar";
 import { UserMenu } from "@/components/UserMenu";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Icon } from "@/components/icons";
+import { SubmitButton } from "@/components/FormControls";
+import { stopImpersonation } from "../platform/actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireSession();
+  const impersonating = await isImpersonating();
   const features = await loadFeatures(user.tenantId, user.tenant.planKey);
 
   const nav = NAV.map((g) => ({
@@ -24,7 +27,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const ed = edition(user.tenant.planKey);
 
   return (
-    <div className="min-h-screen lg:flex" style={{ ["--tenant-primary" as string]: brand?.primary, ["--tenant-accent" as string]: brand?.accent }}>
+    <div className="min-h-screen lg:flex" style={{ ["--tenant-primary" as string]: brand?.primary, ["--tenant-accent" as string]: brand?.accent, paddingTop: impersonating ? 36 : 0 }}>
+      {impersonating && (
+        <div className="fixed top-0 inset-x-0 z-40 flex items-center justify-center gap-3 h-9 text-xs font-semibold" style={{ background: "#f59e0b", color: "#3a2400" }}>
+          <span className="inline-flex items-center gap-1.5"><Icon name="eye" size={13} /> Je bekijkt <b>{user.tenant.name}</b> als klant (platform-admin)</span>
+          <form action={stopImpersonation}><button type="submit" className="underline underline-offset-2 font-bold">← Terug naar platform</button></form>
+        </div>
+      )}
       <Sidebar nav={nav} tenantName={user.tenant.name} tagline={brand?.tagline} primary={brand?.primary} accent={brand?.accent} edition={ed.name} />
       <div className="flex-1 min-w-0 flex flex-col">
         <header className="sticky top-0 z-10 h-14 border-b flex items-center gap-3 px-4 lg:px-6" style={{ background: "color-mix(in srgb, var(--bg-elevated) 88%, transparent)", backdropFilter: "blur(8px)" }}>

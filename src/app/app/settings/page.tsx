@@ -1,8 +1,10 @@
 import { guard } from "@/lib/guard";
 import { query } from "@/db/client";
-import { PageHeader, Card, Section, InfoRow, FeatureLocked } from "@/components/ui";
+import { PageHeader, Card, Section, InfoRow, DataTable, Badge, EmptyState, FeatureLocked } from "@/components/ui";
+import { can } from "@/lib/rbac";
 import { edition, FEATURE_KEYS } from "@/lib/editions";
 import { EditionManager } from "./EditionManager";
+import { NewLocationModal } from "./NewLocationModal";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +23,16 @@ export default async function SettingsPage() {
 
   const ed = edition(user.tenant.planKey);
   const brand = user.tenant.brand as { tagline?: string };
+  const canWrite = can(user, "settings.write");
+
+  const locations = await query<{
+    id: string; name: string; address: string | null; district: string | null;
+    capacity: number | null; is_headquarters: boolean;
+  }>(
+    `SELECT id, name, address, district, capacity, is_headquarters
+       FROM locations WHERE tenant_id=$1 ORDER BY is_headquarters DESC, name`,
+    [user.tenantId]
+  );
 
   return (
     <>
@@ -53,6 +65,29 @@ export default async function SettingsPage() {
             </div>
           </Card>
         </div>
+      </Section>
+
+      <Section title="Locaties" actions={canWrite ? <NewLocationModal /> : undefined}>
+        {locations.length === 0 ? (
+          <EmptyState icon="building" title="Nog geen locaties"
+            subtitle="Voeg vestigingen toe om leden, lessen en check-ins per locatie te beheren." />
+        ) : (
+          <DataTable head={<><th>Naam</th><th>Adres</th><th>District</th><th className="text-right">Capaciteit</th></>}>
+            {locations.map((l) => (
+              <tr key={l.id}>
+                <td>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{l.name}</span>
+                    {l.is_headquarters && <Badge tone="rose">Hoofdvestiging</Badge>}
+                  </div>
+                </td>
+                <td>{l.address ?? <span className="faint">—</span>}</td>
+                <td>{l.district ?? <span className="faint">—</span>}</td>
+                <td className="text-right tabular-nums">{l.capacity ?? <span className="faint">—</span>}</td>
+              </tr>
+            ))}
+          </DataTable>
+        )}
       </Section>
     </>
   );

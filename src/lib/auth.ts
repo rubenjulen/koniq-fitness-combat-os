@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { query, queryOne } from "@/db/client";
 
 const COOKIE = "koniq_fit_session";
+const ADMIN_COOKIE = "koniq_fit_admin"; // stashes the platform-admin token while impersonating a tenant
 const MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
 export type TenantContext = {
@@ -129,10 +130,65 @@ export async function getSession(): Promise<SessionUser | null> {
   };
 }
 
-/** Require an authenticated back-office user with a tenant. Redirects to /login otherwise. */
+/** Require an authenticated back-office user with a tenant. Platform admins → /platform. */
 export async function requireSession(): Promise<SessionUser & { tenantId: string; tenant: TenantContext }> {
   const s = await getSession();
   if (!s) redirect("/login");
-  if (!s.tenantId || !s.tenant) redirect("/login");
+  if (!s.tenantId || !s.tenant) {
+    if (s.isPlatformAdmin) redirect("/platform");
+    redirect("/login");
+  }
   return s as SessionUser & { tenantId: string; tenant: TenantContext };
+}
+
+/** Require the KoniQ platform super-admin. Others → /login (or their app). */
+export async function requirePlatformAdmin(): Promise<SessionUser> {
+  const s = await getSession();
+  if (!s) redirect("/login");
+  if (!s.isPlatformAdmin) redirect("/app");
+  return s;
+}
+
+/** Create a session row for a user id and return its token (does not set the cookie). */
+export async function createSessionForUser(userId: string, tenantId: string | null): Promise<string> {
+  const token = randomBytes(32).toString("hex");
+  await query(
+    `INSERT INTO sessions (id, user_id, tenant_id, token, expires_at) VALUES ($1,$2,$3,$4, now() + interval '7 days')`,
+    [randomUUID(), userId, tenantId, token]
+  );
+  return token;
+}
+
+async function setSessionCookie(token: string) {
+  const jar = await cookies();
+  jar.set(COOKIE, token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: MAX_AGE });
+}
+
+/** Platform admin opens a customer's back-office (impersonation), stashing the admin token to return later. */
+export async function beginImpersonation(ownerUserId: string, tenantId: string) {
+  const jar = await cookies();
+  const adminToken = jar.get(COOKIE)?.value;
+  if (adminToken) jar.set(ADMIN_COOKIE, adminToken, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: MAX_AGE });
+  const token = await createSessionForUser(ownerUserId, tenantId);
+  await setSessionCookie(token);
+}
+
+/** Return from impersonation to the platform console. */
+export async function endImpersonation() {
+  const jar = await cookies();
+  const adminToken = jar.get(ADMIN_COOKIE)?.value;
+  const current = jar.get(COOKIE)?.value;
+  if (current) await query(`DELETE FROM sessions WHERE token=$1`, [current]); // drop the impersonation session
+  if (adminToken) {
+    await setSessionCookie(adminToken);
+    jar.delete(ADMIN_COOKIE);
+  } else {
+    jar.delete(COOKIE);
+  }
+}
+
+/** Is the current request a platform-admin impersonating a tenant? */
+export async function isImpersonating(): Promise<boolean> {
+  const jar = await cookies();
+  return !!jar.get(ADMIN_COOKIE)?.value;
 }
