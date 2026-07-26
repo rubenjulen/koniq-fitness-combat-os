@@ -1,0 +1,22 @@
+# Zelfstandige deploy zonder Coolify (bv. rechtstreeks op een Hetzner-VM).
+# Met Coolify: gebruik de Dockerfile-build; deze compose is optioneel.
+services:
+  app:
+    build: .
+    image: koniq-fitness:latest
+    restart: unless-stopped
+    ports:
+      - "3040:3040"
+    environment:
+      NODE_ENV: production
+      PORT: "3040"
+      # Vul de Supabase pooler-string in (poort 6543). Leeg = ingebedde PGlite (alleen demo).
+      DATABASE_URL: "${DATABASE_URL}"
+      # false = geen demodata in productie. true voor een demo-omgeving.
+      SEED_ON_BOOT: "${SEED_ON_BOOT:-false}"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3040/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s

@@ -30,7 +30,7 @@ Zet secrets in Coolify (niet in git). `.env.example` staat in de repo als sjablo
 ## 3. Container (Coolify op Hetzner)
 1. **New Resource → Application** → koppel de git-repo (of deploy via de meegeleverde `Dockerfile`).
 2. Build pack: **Dockerfile**. Coolify bouwt het `standalone` image (`node server.js`).
-3. Port: **3040**. Health check: `GET /` (verwacht 200).
+3. Port: **3040**. Health check: `GET /api/health` (verwacht 200 met `{status:"ok",db:"up"}`; 503 als de DB onbereikbaar is).
 4. Zet de env-variabelen uit stap 2.
 5. Deploy. Eerste boot past het schema toe; check de logs op “schema toegepast”.
 
