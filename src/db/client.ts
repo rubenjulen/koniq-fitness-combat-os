@@ -37,10 +37,30 @@ function makePglite(): Adapter {
   };
 }
 
+/**
+ * Postgres.js geeft via sql.unsafe() jsonb-kolommen soms terug als string i.p.v.
+ * geparseerde JS-waarde (PGlite doet dat wél). Dat brak de RBAC: roles.capabilities
+ * is jsonb → als string → geen rechten → alles op slot. Hier herstellen we het:
+ * elke string die als JSON-object/array parseert wordt teruggezet naar JS.
+ * Veilig: geen tekstkolom in dit schema begint legitiem met '{' of '['.
+ */
+function reviveJson<T>(rows: T[]): T[] {
+  for (const row of rows as Record<string, unknown>[]) {
+    if (!row || typeof row !== "object") continue;
+    for (const k in row) {
+      const v = row[k];
+      if (typeof v === "string" && v.length > 1 && (v[0] === "{" || v[0] === "[")) {
+        try { row[k] = JSON.parse(v); } catch { /* laat ongewijzigd */ }
+      }
+    }
+  }
+  return rows;
+}
+
 function makePostgres(url: string): Adapter {
   const sql = postgres(url, { max: 10, prepare: false, idle_timeout: 20 });
   return {
-    query: async (text, params = []) => ({ rows: (await sql.unsafe(text, params as any[])) as any[] }),
+    query: async (text, params = []) => ({ rows: reviveJson((await sql.unsafe(text, params as any[])) as any[]) }),
     exec: async (text) => { await sql.unsafe(text); },
   };
 }
