@@ -3,6 +3,8 @@ import { query } from "@/db/client";
 import { PageHeader, Card, StatCard, Section, DataTable, Badge, EmptyState, FeatureLocked } from "@/components/ui";
 import { dateNL, titleCase } from "@/lib/format";
 import { Icon } from "@/components/icons";
+import { can } from "@/lib/rbac";
+import { NewDocumentModal } from "./NewDocumentModal";
 
 export const dynamic = "force-dynamic";
 
@@ -45,8 +47,9 @@ export default async function DocumentsPage() {
   const user = await guard({ feature: "documents", cap: "document.read" });
   if (!user.ok) return <FeatureLocked feature="Documenten" pack="starter" />;
   const t = user.tenantId;
+  const canWrite = can(user, "document.write");
 
-  const [docs, byCategory, kpiRows] = await Promise.all([
+  const [docs, byCategory, kpiRows, memberOpts] = await Promise.all([
     query<DocRow>(
       `SELECT d.id, d.category, d.name, d.version, d.signed_at, d.expires_at, d.created_at,
               m.first_name AS m_first, m.last_name AS m_last,
@@ -77,6 +80,10 @@ export default async function DocumentsPage() {
          FROM documents WHERE tenant_id = $1`,
       [t]
     ),
+    query<{ id: string; first_name: string; last_name: string }>(
+      `SELECT id, first_name, last_name FROM members WHERE tenant_id = $1 ORDER BY first_name, last_name`,
+      [t]
+    ),
   ]);
 
   const k = kpiRows[0] ?? { total: 0, signed: 0, expired: 0, expiring: 0 };
@@ -84,7 +91,7 @@ export default async function DocumentsPage() {
 
   return (
     <>
-      <PageHeader title="Documenten" subtitle="Waivers, contracten, medische verklaringen en certificaten" icon="file" />
+      <PageHeader title="Documenten" subtitle="Waivers, contracten, medische verklaringen en certificaten" icon="file" actions={canWrite ? <NewDocumentModal members={memberOpts} /> : undefined} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <StatCard label="Totaal documenten" value={k.total} icon="file" tone="brand" />

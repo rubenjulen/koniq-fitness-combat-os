@@ -3,6 +3,8 @@ import { query } from "@/db/client";
 import { PageHeader, Card, StatCard, Section, DataTable, StatusBadge, Badge, Avatar, EmptyState, FeatureLocked } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { fullName, titleCase } from "@/lib/format";
+import { can } from "@/lib/rbac";
+import { NewTrainingPlanModal } from "./NewTrainingPlanModal";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -69,8 +71,9 @@ export default async function TrainingPage() {
   const user = await guard({ feature: "training", cap: "training.read" });
   if (!user.ok) return <FeatureLocked feature="Training" pack="performance" />;
   const t = user.tenantId;
+  const canWrite = can(user, "training.write");
 
-  const [exercises, templates, plans, kpiRows] = await Promise.all([
+  const [exercises, templates, plans, kpiRows, memberOpts] = await Promise.all([
     query<ExerciseRow>(
       `SELECT id, name, category, equipment, level, age_min, safety_notes
          FROM exercises WHERE tenant_id = $1
@@ -101,6 +104,10 @@ export default async function TrainingPage() {
             AND log_date >= CURRENT_DATE - INTERVAL '7 days') AS logs_week`,
       [t]
     ),
+    query<{ id: string; first_name: string; last_name: string }>(
+      `SELECT id, first_name, last_name FROM members WHERE tenant_id = $1 ORDER BY first_name, last_name`,
+      [t]
+    ),
   ]);
 
   const k = kpiRows[0] ?? { exercises: 0, templates: 0, active_plans: 0, logs_week: 0 };
@@ -121,6 +128,7 @@ export default async function TrainingPage() {
         title="Training"
         subtitle="Oefeningenbibliotheek, programmasjablonen en actieve trainingsplannen"
         icon="dumbbell"
+        actions={canWrite ? <NewTrainingPlanModal members={memberOpts} templates={templates} /> : undefined}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">

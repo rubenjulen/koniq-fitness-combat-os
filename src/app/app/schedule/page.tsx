@@ -3,6 +3,8 @@ import { query } from "@/db/client";
 import { PageHeader, Card, StatCard, Section, DataTable, Badge, EmptyState, FeatureLocked } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { titleCase, WEEKDAYS, WEEKDAYS_SHORT } from "@/lib/format";
+import { can } from "@/lib/rbac";
+import { NewClassModal, NewClassTypeModal } from "./ScheduleActions";
 
 export const dynamic = "force-dynamic";
 
@@ -38,8 +40,9 @@ export default async function SchedulePage() {
   const user = await guard({ feature: "schedule", cap: "schedule.read" });
   if (!user.ok) return <FeatureLocked feature="Agenda & lessen" pack="starter" />;
   const t = user.tenantId;
+  const canWrite = can(user, "schedule.write");
 
-  const [classes, types] = await Promise.all([
+  const [classes, types, coaches, locations] = await Promise.all([
     query<ClassRow>(
       `SELECT c.id, c.title, c.weekday, c.start_time, c.end_time, c.capacity, c.resource, c.is_sparring,
               ct.name AS type_name, ct.discipline, ct.level, ct.intensity, ct.color,
@@ -59,6 +62,14 @@ export default async function SchedulePage() {
         ORDER BY ct.discipline NULLS LAST, ct.name`,
       [t]
     ),
+    query<{ id: string; name: string }>(
+      `SELECT id, name FROM coaches WHERE tenant_id = $1 AND active = true ORDER BY name`,
+      [t]
+    ),
+    query<{ id: string; name: string }>(
+      `SELECT id, name FROM locations WHERE tenant_id = $1 ORDER BY name`,
+      [t]
+    ),
   ]);
 
   const totalClasses = classes.length;
@@ -73,7 +84,8 @@ export default async function SchedulePage() {
 
   return (
     <>
-      <PageHeader title="Weekrooster" subtitle="Alle terugkerende lessen per weekdag" icon="calendar" />
+      <PageHeader title="Weekrooster" subtitle="Alle terugkerende lessen per weekdag" icon="calendar"
+        actions={canWrite ? <div className="flex items-center gap-2"><NewClassTypeModal /><NewClassModal classTypes={types} coaches={coaches} locations={locations} /></div> : undefined} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <StatCard label="Lessen per week" value={totalClasses} icon="calendar" tone="brand" />

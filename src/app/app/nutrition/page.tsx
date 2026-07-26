@@ -3,6 +3,8 @@ import { query } from "@/db/client";
 import { PageHeader, Card, StatCard, Section, DataTable, Badge, Avatar, EmptyState, FeatureLocked } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { fullName, titleCase } from "@/lib/format";
+import { can } from "@/lib/rbac";
+import { NewNutritionPlanModal } from "./NewNutritionPlanModal";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -41,8 +43,9 @@ export default async function NutritionPage() {
   const user = await guard({ feature: "nutrition", cap: "nutrition.read" });
   if (!user.ok) return <FeatureLocked feature="Voeding" pack="performance" />;
   const t = user.tenantId;
+  const canWrite = can(user, "nutrition.write");
 
-  const [plans, kpiRows] = await Promise.all([
+  const [plans, kpiRows, members] = await Promise.all([
     query<PlanRow>(
       `SELECT np.id, np.goal, np.style, np.calories, np.macros, np.status,
               np.needs_pro_review, np.risk_flag, m.first_name, m.last_name, m.photo_url
@@ -60,6 +63,11 @@ export default async function NutritionPage() {
          (SELECT COALESCE(avg(calories), 0)::int FROM nutrition_plans WHERE tenant_id = $1 AND calories IS NOT NULL) AS avg_calories`,
       [t]
     ),
+    query<{ id: string; first_name: string | null; last_name: string | null }>(
+      `SELECT id, first_name, last_name FROM members
+        WHERE tenant_id = $1 ORDER BY first_name, last_name`,
+      [t]
+    ),
   ]);
 
   const k = kpiRows[0] ?? { active: 0, needs_review: 0, risk: 0, avg_calories: 0 };
@@ -70,6 +78,7 @@ export default async function NutritionPage() {
         title="Voeding"
         subtitle="Voedingsbegeleiding op basis van WHO-principes met professionele controle"
         icon="apple"
+        actions={canWrite ? <NewNutritionPlanModal members={members} /> : undefined}
       />
 
       <Card className="mb-6">

@@ -3,6 +3,8 @@ import { query } from "@/db/client";
 import { PageHeader, Card, StatCard, Section, DataTable, StatusBadge, Badge, Avatar, EmptyState, FeatureLocked } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { fullName, titleCase, WEEKDAYS_SHORT } from "@/lib/format";
+import { can } from "@/lib/rbac";
+import { GenerateAiPlanModal } from "./GenerateAiPlanModal";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -62,8 +64,9 @@ export default async function AiCoachPage() {
   const user = await guard({ feature: "ai_coach", cap: "training.read" });
   if (!user.ok) return <FeatureLocked feature="AI Coach" pack="performance" />;
   const t = user.tenantId;
+  const canWrite = can(user, "training.write");
 
-  const [plans, kpiRows] = await Promise.all([
+  const [plans, kpiRows, memberOpts] = await Promise.all([
     query<PlanRow>(
       `SELECT tp.id, tp.name, tp.goal, tp.status, tp.safety_flag, tp.explanation,
               tp.approved_by, tp.week, m.first_name, m.last_name, m.photo_url
@@ -82,6 +85,10 @@ export default async function AiCoachPage() {
          (SELECT count(*)::int FROM training_plans WHERE tenant_id = $1 AND generated_by = 'ai' AND approved_by IS NOT NULL) AS reviewed`,
       [t]
     ),
+    query<{ id: string; first_name: string; last_name: string; is_minor: boolean }>(
+      `SELECT id, first_name, last_name, is_minor FROM members WHERE tenant_id = $1 ORDER BY first_name, last_name`,
+      [t]
+    ),
   ]);
 
   const k = kpiRows[0] ?? { ai_generated: 0, approved: 0, escalated: 0, reviewed: 0 };
@@ -95,6 +102,7 @@ export default async function AiCoachPage() {
         title="AI Coach"
         subtitle="Veilige, begeleide trainingsplanning met menselijke eindcontrole"
         icon="sparkles"
+        actions={canWrite ? <GenerateAiPlanModal members={memberOpts} /> : undefined}
       />
 
       <Card className="mb-6">

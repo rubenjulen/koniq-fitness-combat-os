@@ -2,7 +2,9 @@ import { requireMember } from "@/lib/portal-auth";
 import { query, queryOne } from "@/db/client";
 import { Card, Badge, StatusBadge, Progress } from "@/components/ui";
 import { Icon } from "@/components/icons";
+import { SubmitButton } from "@/components/FormControls";
 import { money, WEEKDAYS_SHORT } from "@/lib/format";
+import { bookClass, logWorkout } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -13,8 +15,8 @@ export default async function PortalHome() {
   const greet = hour < 12 ? "Goedemorgen" : hour < 18 ? "Goedemiddag" : "Goedenavond";
 
   const [nextClass, membership, lastInvoice, attCount, plan] = await Promise.all([
-    queryOne<{ title: string; start_time: string; end_time: string }>(
-      `SELECT title, start_time, end_time FROM classes WHERE tenant_id=$1 AND weekday=$2 AND active ORDER BY start_time LIMIT 1`, [m.tenantId, wd]),
+    queryOne<{ id: string; title: string; start_time: string; end_time: string }>(
+      `SELECT id, title, start_time, end_time FROM classes WHERE tenant_id=$1 AND weekday=$2 AND active ORDER BY start_time LIMIT 1`, [m.tenantId, wd]),
     queryOne<{ status: string; package: string | null; next_bill_date: string | null }>(
       `SELECT ms.status, p.name AS package, ms.next_bill_date FROM memberships ms LEFT JOIN packages p ON p.id=ms.package_id
         WHERE ms.tenant_id=$1 AND ms.member_id=$2 ORDER BY ms.created_at DESC LIMIT 1`, [m.tenantId, m.id]),
@@ -25,6 +27,13 @@ export default async function PortalHome() {
     queryOne<{ week: Record<string, string[]>; goal: string | null }>(
       `SELECT week, goal FROM training_plans WHERE tenant_id=$1 AND member_id=$2 AND status='active' ORDER BY created_at DESC LIMIT 1`, [m.tenantId, m.id]),
   ]);
+
+  const alreadyBooked = nextClass
+    ? await queryOne<{ id: string }>(
+        `SELECT id FROM bookings WHERE tenant_id=$1 AND member_id=$2 AND class_id=$3 AND session_date=current_date LIMIT 1`,
+        [m.tenantId, m.id, nextClass.id]
+      )
+    : null;
 
   const dayKeys = ["ma", "di", "wo", "do", "vr", "za", "zo"];
   const week = plan?.week ?? {};
@@ -46,7 +55,16 @@ export default async function PortalHome() {
               <p className="font-semibold">{nextClass.title}</p>
               <p className="text-sm muted">{nextClass.start_time} – {nextClass.end_time}</p>
             </div>
-            <button className="btn btn-primary btn-sm">Boek</button>
+            {alreadyBooked ? (
+              <span className="text-sm font-semibold flex items-center gap-1" style={{ color: "#059669" }}>
+                <Icon name="check" size={16} /> geboekt
+              </span>
+            ) : (
+              <form action={bookClass}>
+                <input type="hidden" name="classId" value={nextClass.id} />
+                <SubmitButton variant="primary" className="btn-sm">Boek</SubmitButton>
+              </form>
+            )}
           </div>
         ) : <p className="text-sm muted">Geen les gepland vandaag. Tijd voor rust of eigen training. 💪</p>}
       </Card>
@@ -93,7 +111,10 @@ export default async function PortalHome() {
       </Card>
 
       <div className="grid grid-cols-2 gap-3">
-        <button className="btn btn-primary"><Icon name="dumbbell" size={16} /> Start workout</button>
+        <form action={logWorkout} className="contents">
+          <input type="hidden" name="summary" value="Eigen training" />
+          <SubmitButton icon="dumbbell" variant="primary">Start workout</SubmitButton>
+        </form>
         <button className="btn btn-secondary"><Icon name="trend" size={16} /> Progress</button>
       </div>
     </div>

@@ -3,6 +3,8 @@ import { query } from "@/db/client";
 import { PageHeader, Card, StatCard, Section, DataTable, StatusBadge, Badge, Avatar, EmptyState, Sparkline, FeatureLocked } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { dateNL, fullName } from "@/lib/format";
+import { can } from "@/lib/rbac";
+import { NewGoalModal, LogMetricModal } from "./ProgressActions";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -74,8 +76,9 @@ export default async function ProgressPage() {
   const user = await guard({ feature: "progress", cap: "progress.read" });
   if (!user.ok) return <FeatureLocked feature="Voortgang" pack="performance" />;
   const t = user.tenantId;
+  const canWrite = can(user, "progress.write");
 
-  const [goals, weights, series, pbs, milestones, kpiRows] = await Promise.all([
+  const [goals, weights, series, pbs, milestones, kpiRows, members] = await Promise.all([
     query<GoalRow>(
       `SELECT g.id, g.title, g.baseline, g.target, g.target_date, g.status,
               m.first_name, m.last_name, m.photo_url
@@ -134,6 +137,11 @@ export default async function ProgressPage() {
          (SELECT count(DISTINCT member_id)::int FROM progress_metrics WHERE tenant_id = $1) AS members_metrics`,
       [t]
     ),
+    query<{ id: string; first_name: string | null; last_name: string | null }>(
+      `SELECT id, first_name, last_name FROM members
+        WHERE tenant_id = $1 ORDER BY first_name, last_name`,
+      [t]
+    ),
   ]);
 
   const k = kpiRows[0] ?? { active_goals: 0, achieved_goals: 0, prs: 0, members_metrics: 0 };
@@ -162,6 +170,12 @@ export default async function ProgressPage() {
         title="Voortgang & assessments"
         subtitle="Doelen, persoonlijke records en mijlpalen — metingen zijn privé"
         icon="trend"
+        actions={canWrite ? (
+          <div className="flex items-center gap-2">
+            <LogMetricModal members={members} />
+            <NewGoalModal members={members} />
+          </div>
+        ) : undefined}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">

@@ -3,6 +3,8 @@ import { query } from "@/db/client";
 import { PageHeader, Card, StatCard, Section, DataTable, StatusBadge, Badge, Avatar, EmptyState, FeatureLocked } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { timeAgo, dateNL, fullName, titleCase, pct } from "@/lib/format";
+import { can } from "@/lib/rbac";
+import { SendMessageModal, NewAnnouncementModal } from "./InboxActions";
 
 export const dynamic = "force-dynamic";
 
@@ -40,8 +42,9 @@ export default async function InboxPage() {
   const user = await guard({ feature: "communication", cap: "communication.read" });
   if (!user.ok) return <FeatureLocked feature="Communicatie & community" pack="pro" />;
   const t = user.tenantId;
+  const canWrite = can(user, "communication.write");
 
-  const [messages, templates, announcements, byChannel, kpi] = await Promise.all([
+  const [messages, templates, announcements, byChannel, kpi, members] = await Promise.all([
     query<Message>(
       `SELECT m.id, m.channel, m.direction, m.subject, m.body, m.status, m.created_at,
               mem.first_name, mem.last_name
@@ -51,8 +54,8 @@ export default async function InboxPage() {
        ORDER BY m.created_at DESC LIMIT 40`,
       [t]
     ),
-    query<{ id: string; name: string; channel: string; body: string | null; subject: string | null }>(
-      `SELECT id, name, channel, body, subject FROM message_templates
+    query<{ id: string; key: string; name: string; channel: string; body: string | null; subject: string | null }>(
+      `SELECT id, key, name, channel, body, subject FROM message_templates
        WHERE tenant_id=$1 ORDER BY channel, name`,
       [t]
     ),
@@ -75,6 +78,11 @@ export default async function InboxPage() {
        FROM messages WHERE tenant_id=$1`,
       [t]
     ),
+    query<{ id: string; first_name: string | null; last_name: string | null }>(
+      `SELECT id, first_name, last_name FROM members
+       WHERE tenant_id=$1 ORDER BY first_name, last_name`,
+      [t]
+    ),
   ]);
 
   const k = kpi[0] ?? { today: 0, week: 0, delivered: 0, total: 0 };
@@ -82,7 +90,17 @@ export default async function InboxPage() {
 
   return (
     <>
-      <PageHeader title="Communicatie-inbox" subtitle="WhatsApp, e-mail en aankondigingen op één plek" icon="inbox" />
+      <PageHeader
+        title="Communicatie-inbox"
+        subtitle="WhatsApp, e-mail en aankondigingen op één plek"
+        icon="inbox"
+        actions={canWrite ? (
+          <div className="flex items-center gap-2">
+            <SendMessageModal members={members} templates={templates} />
+            <NewAnnouncementModal />
+          </div>
+        ) : undefined}
+      />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <StatCard label="Berichten vandaag" value={k.today} icon="chat" tone="brand" sub={`${k.week} deze week`} />

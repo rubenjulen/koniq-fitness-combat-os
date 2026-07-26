@@ -1,8 +1,11 @@
 import { guard } from "@/lib/guard";
+import { can } from "@/lib/rbac";
 import { query } from "@/db/client";
 import { PageHeader, Card, StatCard, Section, StatusBadge, Badge, EmptyState, InfoRow, FeatureLocked } from "@/components/ui";
 import { Icon } from "@/components/icons";
+import { SubmitButton } from "@/components/FormControls";
 import { timeAgo, titleCase } from "@/lib/format";
+import { toggleIntegration } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +49,7 @@ export default async function IntegrationsPage() {
   const user = await guard({ feature: "integrations", cap: "settings.read" });
   if (!user.ok) return <FeatureLocked feature="Integraties" pack="enterprise" />;
   const t = user.tenantId;
+  const canWrite = can(user, "settings.write");
 
   const [rows, kpiRows] = await Promise.all([
     query<IntegrationRow>(
@@ -147,9 +151,22 @@ export default async function IntegrationsPage() {
                       <span className="faint">
                         {i.last_sync_at ? `Sync ${timeAgo(i.last_sync_at)}` : "Nog niet gesynchroniseerd"}
                       </span>
-                      <span className={i.status === "connected" ? "muted" : "link"} style={{ fontWeight: 500 }}>
-                        {i.status === "connected" ? "Verbonden" : i.status === "error" ? "Opnieuw verbinden" : "Verbinden"}
-                      </span>
+                      {canWrite ? (
+                        <form action={toggleIntegration}>
+                          <input type="hidden" name="integrationId" value={i.id} />
+                          <SubmitButton
+                            icon={i.status === "connected" ? "plug" : "check"}
+                            variant={i.status === "connected" ? "ghost" : "primary"}
+                            className="btn-sm"
+                          >
+                            {i.status === "connected" ? "Verbreken" : "Verbinden"}
+                          </SubmitButton>
+                        </form>
+                      ) : (
+                        <span className={i.status === "connected" ? "muted" : "link"} style={{ fontWeight: 500 }}>
+                          {i.status === "connected" ? "Verbonden" : i.status === "error" ? "Opnieuw verbinden" : "Verbinden"}
+                        </span>
+                      )}
                     </div>
                   </Card>
                 ))}

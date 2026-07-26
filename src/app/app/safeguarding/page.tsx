@@ -3,6 +3,8 @@ import { query } from "@/db/client";
 import { PageHeader, Card, StatCard, Section, DataTable, StatusBadge, Badge, Avatar, EmptyState, Progress, InfoRow, FeatureLocked } from "@/components/ui";
 import { dateNL, fullName, titleCase } from "@/lib/format";
 import { Icon } from "@/components/icons";
+import { can } from "@/lib/rbac";
+import { NewCaseModal } from "./NewCaseModal";
 
 export const dynamic = "force-dynamic";
 
@@ -49,8 +51,9 @@ export default async function SafeguardingPage() {
   const user = await guard({ feature: "safeguarding", cap: "safeguarding.read" });
   if (!user.ok) return <FeatureLocked feature="Safeguarding" pack="enterprise" />;
   const t = user.tenantId;
+  const canWrite = can(user, "safeguarding.write");
 
-  const [cases, certs, kpiRows, consentRows] = await Promise.all([
+  const [cases, certs, kpiRows, consentRows, memberOpts] = await Promise.all([
     query<CaseRow>(
       `SELECT sc.id, sc.type, sc.severity, sc.status, sc.confidential, sc.created_at,
               m.first_name, m.last_name,
@@ -95,6 +98,10 @@ export default async function SafeguardingPage() {
          (SELECT count(*)::int FROM members WHERE tenant_id = $1) AS members_total`,
       [t]
     ),
+    query<{ id: string; first_name: string; last_name: string }>(
+      `SELECT id, first_name, last_name FROM members WHERE tenant_id = $1 ORDER BY first_name, last_name`,
+      [t]
+    ),
   ]);
 
   const k = kpiRows[0] ?? { open_cases: 0, confidential_cases: 0, minors: 0, consents_missing: 0 };
@@ -104,7 +111,7 @@ export default async function SafeguardingPage() {
 
   return (
     <>
-      <PageHeader title="Safeguarding" subtitle="Bescherming van jeugdleden — vertrouwelijk" icon="shield" />
+      <PageHeader title="Safeguarding" subtitle="Bescherming van jeugdleden — vertrouwelijk" icon="shield" actions={canWrite ? <NewCaseModal members={memberOpts} /> : undefined} />
 
       <Card className="mb-6" >
         <div className="flex items-start gap-3">

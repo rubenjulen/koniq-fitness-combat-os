@@ -2,6 +2,8 @@ import { guard } from "@/lib/guard";
 import { query } from "@/db/client";
 import { PageHeader, Card, StatCard, Section, DataTable, StatusBadge, Badge, EmptyState, FeatureLocked } from "@/components/ui";
 import { money, dateNL, pct } from "@/lib/format";
+import { can } from "@/lib/rbac";
+import { NewCampaignModal } from "./NewCampaignModal";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +39,7 @@ export default async function MarketingPage() {
   if (!user.ok) return <FeatureLocked feature="Marketing & social" pack="pro" />;
   const t = user.tenantId;
   const cur = user.tenant.currency;
+  const canWrite = can(user, "marketing.write");
 
   const [campaigns, byChannel, totals] = await Promise.all([
     query<Campaign>(
@@ -71,7 +74,8 @@ export default async function MarketingPage() {
 
   return (
     <>
-      <PageHeader title="Marketing & ROI" subtitle="Campagnes, kosten per acquisitie en kanaalrendement" icon="megaphone" />
+      <PageHeader title="Marketing & ROI" subtitle="Campagnes, kosten per acquisitie en kanaalrendement" icon="megaphone"
+        actions={canWrite ? <NewCampaignModal /> : undefined} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <StatCard label="Totale spend" value={money(tot.spend, cur)} icon="coins" tone="brand" sub={`budget ${money(tot.budget, cur)}`} />

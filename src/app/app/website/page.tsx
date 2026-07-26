@@ -2,6 +2,8 @@ import { guard } from "@/lib/guard";
 import { query } from "@/db/client";
 import { PageHeader, Card, StatCard, Section, DataTable, Badge, EmptyState, LinkButton, FeatureLocked } from "@/components/ui";
 import { money, dateNL, titleCase } from "@/lib/format";
+import { can } from "@/lib/rbac";
+import { NewPageModal, PagePublishToggle } from "./WebsiteActions";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +13,7 @@ export default async function WebsitePage() {
   if (!user.ok) return <FeatureLocked feature="Website & CMS" pack="starter" />;
   const t = user.tenantId;
   const cur = user.tenant.currency;
+  const canWrite = can(user, "website.write");
 
   const [pages, programs, packages, coaches, events, kpi] = await Promise.all([
     query<{ id: string; slug: string; title: string; published: boolean; updated_at: string }>(
@@ -56,7 +59,12 @@ export default async function WebsitePage() {
         title="Website & CMS"
         subtitle="Beheer wat er op je publieke site verschijnt"
         icon="globe"
-        actions={<LinkButton href="/" variant="secondary" icon="eye">Bekijk site</LinkButton>}
+        actions={
+          <div className="flex items-center gap-2">
+            <LinkButton href="/" variant="secondary" icon="eye">Bekijk site</LinkButton>
+            {canWrite && <NewPageModal />}
+          </div>
+        }
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
@@ -70,13 +78,14 @@ export default async function WebsitePage() {
         {pages.length === 0 ? (
           <EmptyState icon="file" title="Nog geen pagina's" subtitle="Maak pagina's aan om je publieke site te vullen." />
         ) : (
-          <DataTable head={<><th>Titel</th><th>Slug</th><th>Status</th><th className="text-right">Bijgewerkt</th></>}>
+          <DataTable head={<><th>Titel</th><th>Slug</th><th>Status</th><th className="text-right">Bijgewerkt</th>{canWrite && <th className="text-right">Actie</th>}</>}>
             {pages.map((p) => (
               <tr key={p.id}>
                 <td className="font-medium">{p.title}</td>
                 <td className="faint">/{p.slug}</td>
                 <td>{p.published ? <Badge tone="green">Gepubliceerd</Badge> : <Badge tone="slate">Concept</Badge>}</td>
                 <td className="text-right faint text-sm">{dateNL(p.updated_at)}</td>
+                {canWrite && <td className="text-right"><PagePublishToggle pageId={p.id} published={p.published} /></td>}
               </tr>
             ))}
           </DataTable>
