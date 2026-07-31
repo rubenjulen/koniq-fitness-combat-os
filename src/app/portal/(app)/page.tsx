@@ -1,10 +1,11 @@
+import Link from "next/link";
 import { requireMember } from "@/lib/portal-auth";
 import { query, queryOne } from "@/db/client";
 import { Card, Badge, StatusBadge, Progress } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { SubmitButton } from "@/components/FormControls";
 import { money, WEEKDAYS_SHORT } from "@/lib/format";
-import { bookClass, logWorkout } from "./actions";
+import { bookClass } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -111,11 +112,8 @@ export default async function PortalHome() {
       </Card>
 
       <div className="grid grid-cols-2 gap-3">
-        <form action={logWorkout} className="contents">
-          <input type="hidden" name="summary" value="Eigen training" />
-          <SubmitButton icon="dumbbell" variant="primary">Start workout</SubmitButton>
-        </form>
-        <button className="btn btn-secondary"><Icon name="trend" size={16} /> Progress</button>
+        <Link href="/portal/workout" className="btn btn-primary"><Icon name="dumbbell" size={16} /> Start workout</Link>
+        <Link href="/portal/progress" className="btn btn-secondary"><Icon name="trend" size={16} /> Progress</Link>
       </div>
     </div>
   );

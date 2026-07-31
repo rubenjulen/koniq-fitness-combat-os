@@ -1,8 +1,25 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
 import { requireMember } from "@/lib/portal-auth";
 import { query, queryOne } from "@/db/client";
+
+/** Finish a guided workout: log it and return to the member home. */
+export async function completeWorkout(formData: FormData) {
+  const m = await requireMember();
+  const summary = String(formData.get("summary") ?? "").trim() || "Geleide workout";
+  const rpeRaw = String(formData.get("rpe") ?? "").trim();
+  const rpe = rpeRaw ? parseInt(rpeRaw, 10) : null;
+  await query(
+    `INSERT INTO workout_logs (id, tenant_id, member_id, log_date, summary, rpe, completed)
+     VALUES ($1,$2,$3,current_date,$4,$5,true)`,
+    [randomUUID(), m.tenantId, m.id, summary, rpe !== null && !isNaN(rpe) ? rpe : null]
+  );
+  revalidatePath("/portal");
+  revalidatePath("/portal/training");
+  redirect("/portal");
+}
 
 /** Book today's class for the logged-in member (idempotent per member+class+day). */
 export async function bookClass(formData: FormData) {
