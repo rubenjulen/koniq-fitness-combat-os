@@ -1,0 +1,13 @@
+{
+  "model": "/models/character.glb",
+  "animations": {
+    "jack": "/models/jumping-jacks.glb",
+    "squat": "/models/squat.glb",
+    "punch": "/models/jab-cross.glb",
+    "pushup": "/models/pushups.glb",
+    "plank": "/models/plank.glb",
+    "idle": "/models/idle.glb"
+  },
+  "scale": 1.0,
+  "yOffset": 0
+}

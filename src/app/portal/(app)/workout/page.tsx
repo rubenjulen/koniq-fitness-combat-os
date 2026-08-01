@@ -1,9 +1,21 @@
 import Link from "next/link";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { requireMember } from "@/lib/portal-auth";
 import { query, queryOne } from "@/db/client";
 import { Icon } from "@/components/icons";
 import { WorkoutPlayer, type Exercise } from "./WorkoutPlayer";
+import type { AvatarModelConfig } from "./Avatar3DModel";
 import { completeWorkout } from "../actions";
+
+/** Load a 3D model manifest if the club dropped one in /public/models/ (else procedural avatar). */
+function loadModelConfig(): AvatarModelConfig | null {
+  try {
+    const p = join(process.cwd(), "public", "models", "manifest.json");
+    if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")) as AvatarModelConfig;
+  } catch { /* geen/ongeldig manifest → procedurele avatar */ }
+  return null;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +74,7 @@ export default async function WorkoutPage() {
     return vids.find((v) => ks.some((k) => v.name.toLowerCase().includes(k)))?.video_url;
   };
   const workout = base.map((e) => ({ ...e, videoUrl: findVid(e.move) }));
+  const modelConfig = loadModelConfig();
 
   return (
     <div className="space-y-4">
@@ -73,7 +86,7 @@ export default async function WorkoutPage() {
         </div>
       </div>
 
-      <WorkoutPlayer workout={workout} completeAction={completeWorkout} />
+      <WorkoutPlayer workout={workout} completeAction={completeWorkout} modelConfig={modelConfig} />
 
       <div className="card p-4">
         <p className="text-sm font-semibold mb-1 flex items-center gap-1.5"><Icon name="fire" size={15} className="tprimary" /> Zo werkt het</p>

@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icons";
 import { Avatar3D, type Frame } from "./Avatar3D";
+import { Avatar3DModel, type AvatarModelConfig } from "./Avatar3DModel";
 
 export type Exercise = { name: string; cat: string; move: string; mode: "reps" | "time"; target: number; tempo?: number; videoUrl?: string };
 
@@ -22,7 +23,7 @@ const REST = 8;
 const BRAND = "#e11d48", AMBER = "#f59e0b";
 const R = 43, CIRC = 2 * Math.PI * R;
 
-export function WorkoutPlayer({ workout, completeAction }: { workout: Exercise[]; completeAction: (fd: FormData) => void | Promise<void> }) {
+export function WorkoutPlayer({ workout, completeAction, modelConfig }: { workout: Exercise[]; completeAction: (fd: FormData) => void | Promise<void>; modelConfig?: AvatarModelConfig | null }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const ringRef = useRef<SVGCircleElement>(null);
   const acRef = useRef<AudioContext | null>(null);
@@ -30,6 +31,7 @@ export function WorkoutPlayer({ workout, completeAction }: { workout: Exercise[]
   const s = useRef({ idx: 0, phase: 0, reps: 0, mode: "ready" as "ready" | "work" | "rest" | "done", rest: 0, paused: true, last: 0, lastc: -1, lastr: -1, t: 0 });
   const [ui, setUi] = useState({ idx: 0, reps: 0, mode: "ready" as string, restNum: REST });
   const [webgl, setWebgl] = useState(true);
+  const [modelOk, setModelOk] = useState(true);
   const cur = workout[Math.min(ui.idx, workout.length - 1)];
 
   function beep(f: number, d = 0.08) {
@@ -141,7 +143,11 @@ export function WorkoutPlayer({ workout, completeAction }: { workout: Exercise[]
 
       <div className="relative" style={{ background: "var(--bg-subtle)", height: 240, display: "grid", placeItems: "center" }}>
         <canvas ref={canvasRef} width={840} height={440} style={{ width: "100%", height: "100%", display: done || webgl ? "none" : "block" }} />
-        {!done && webgl && <Avatar3D frameRef={frameRef} onFail={() => setWebgl(false)} />}
+        {!done && webgl && (
+          modelConfig && modelOk
+            ? <Avatar3DModel frameRef={frameRef} config={modelConfig} onFail={() => setModelOk(false)} />
+            : <Avatar3D frameRef={frameRef} onFail={() => setWebgl(false)} />
+        )}
         {!done && cur.videoUrl && ui.mode !== "rest" && (
           <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}><DemoMedia url={cur.videoUrl} /></div>
         )}
