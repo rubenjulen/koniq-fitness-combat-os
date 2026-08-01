@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icons";
+import { Avatar3D, type Frame } from "./Avatar3D";
 
 export type Exercise = { name: string; cat: string; move: string; mode: "reps" | "time"; target: number; tempo?: number; videoUrl?: string };
 
@@ -25,8 +26,10 @@ export function WorkoutPlayer({ workout, completeAction }: { workout: Exercise[]
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const ringRef = useRef<SVGCircleElement>(null);
   const acRef = useRef<AudioContext | null>(null);
+  const frameRef = useRef<Frame>({ move: "jack", phase: 0, t: 0, mode: "ready", rep: 0 });
   const s = useRef({ idx: 0, phase: 0, reps: 0, mode: "ready" as "ready" | "work" | "rest" | "done", rest: 0, paused: true, last: 0, lastc: -1, lastr: -1, t: 0 });
   const [ui, setUi] = useState({ idx: 0, reps: 0, mode: "ready" as string, restNum: REST });
+  const [webgl, setWebgl] = useState(true);
   const cur = workout[Math.min(ui.idx, workout.length - 1)];
 
   function beep(f: number, d = 0.08) {
@@ -105,7 +108,9 @@ export function WorkoutPlayer({ workout, completeAction }: { workout: Exercise[]
         }
       }
       const w2 = workout[st.idx];
-      draw(w2.move, st.mode === "rest" ? 0 : (w2.mode === "reps" ? st.phase : st.t), st.reps, st.t);
+      const figPhase = st.mode === "rest" ? 0 : (w2.mode === "reps" ? st.phase : st.t);
+      frameRef.current = { move: w2.move, phase: figPhase, t: st.t, mode: st.mode, rep: st.reps };
+      draw(w2.move, figPhase, st.reps, st.t);
       raf = requestAnimationFrame(loop);
     }
     raf = requestAnimationFrame(loop);
@@ -135,7 +140,8 @@ export function WorkoutPlayer({ workout, completeAction }: { workout: Exercise[]
       </div>
 
       <div className="relative" style={{ background: "var(--bg-subtle)", height: 240, display: "grid", placeItems: "center" }}>
-        <canvas ref={canvasRef} width={840} height={440} style={{ width: "100%", height: "100%", display: done ? "none" : "block" }} />
+        <canvas ref={canvasRef} width={840} height={440} style={{ width: "100%", height: "100%", display: done || webgl ? "none" : "block" }} />
+        {!done && webgl && <Avatar3D frameRef={frameRef} onFail={() => setWebgl(false)} />}
         {!done && cur.videoUrl && ui.mode !== "rest" && (
           <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}><DemoMedia url={cur.videoUrl} /></div>
         )}
