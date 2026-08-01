@@ -64,3 +64,42 @@ export async function createTrainingPlan(formData: FormData) {
   );
   revalidatePath("/app/training");
 }
+
+const CATEGORIES = ["combat_drill", "strength", "conditioning", "mobility", "recovery", "technique"];
+
+/** Couple/replace the demo video (URL) + instructions + safety notes for an exercise. */
+export async function updateExercise(formData: FormData) {
+  const user = await requireSession();
+  if (!can(user, "training.write")) throw new Error("Geen rechten.");
+  const id = String(formData.get("exerciseId") ?? "");
+  if (!id) return;
+  const videoUrl = String(formData.get("video_url") ?? "").trim() || null;
+  const instructions = String(formData.get("instructions") ?? "").trim() || null;
+  const safety = String(formData.get("safety_notes") ?? "").trim() || null;
+  await query(
+    `UPDATE exercises SET video_url=$1, instructions=$2, safety_notes=$3 WHERE id=$4 AND tenant_id=$5`,
+    [videoUrl, instructions, safety, id, user.tenantId]
+  );
+  revalidatePath("/app/training");
+}
+
+/** Add a new exercise to the library (optionally with a demo video). */
+export async function createExercise(formData: FormData) {
+  const user = await requireSession();
+  if (!can(user, "training.write")) throw new Error("Geen rechten.");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) throw new Error("Naam is verplicht.");
+  const catRaw = String(formData.get("category") ?? "strength");
+  const category = CATEGORIES.includes(catRaw) ? catRaw : "strength";
+  const equipment = String(formData.get("equipment") ?? "").trim() || null;
+  const level = String(formData.get("level") ?? "").trim() || null;
+  const videoUrl = String(formData.get("video_url") ?? "").trim() || null;
+  const instructions = String(formData.get("instructions") ?? "").trim() || null;
+  const safety = String(formData.get("safety_notes") ?? "").trim() || null;
+  await query(
+    `INSERT INTO exercises (id, tenant_id, name, category, equipment, level, video_url, instructions, safety_notes)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+    [randomUUID(), user.tenantId, name, category, equipment, level, videoUrl, instructions, safety]
+  );
+  revalidatePath("/app/training");
+}

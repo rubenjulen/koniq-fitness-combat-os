@@ -2,7 +2,20 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icons";
 
-export type Exercise = { name: string; cat: string; move: string; mode: "reps" | "time"; target: number; tempo?: number };
+export type Exercise = { name: string; cat: string; move: string; mode: "reps" | "time"; target: number; tempo?: number; videoUrl?: string };
+
+/** Render a coach demo video (mp4/webm, YouTube or Vimeo) as a looping muted clip. */
+function DemoMedia({ url }: { url: string }) {
+  const u = url.trim();
+  const yt = u.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]{11})/);
+  if (yt) {
+    const id = yt[1];
+    return <iframe key={u} src={`https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&modestbranding=1&playsinline=1&rel=0`} className="w-full h-full" style={{ border: 0 }} allow="autoplay; encrypted-media" title="Oefeningsvideo" />;
+  }
+  const vm = u.match(/vimeo\.com\/(\d+)/);
+  if (vm) return <iframe key={u} src={`https://player.vimeo.com/video/${vm[1]}?autoplay=1&muted=1&loop=1&background=1`} className="w-full h-full" style={{ border: 0 }} allow="autoplay" title="Oefeningsvideo" />;
+  return <video key={u} src={u} autoPlay loop muted playsInline className="w-full h-full" style={{ objectFit: "cover" }} />;
+}
 
 const REST = 8;
 const BRAND = "#e11d48", AMBER = "#f59e0b";
@@ -123,6 +136,9 @@ export function WorkoutPlayer({ workout, completeAction }: { workout: Exercise[]
 
       <div className="relative" style={{ background: "var(--bg-subtle)", height: 240, display: "grid", placeItems: "center" }}>
         <canvas ref={canvasRef} width={840} height={440} style={{ width: "100%", height: "100%", display: done ? "none" : "block" }} />
+        {!done && cur.videoUrl && ui.mode !== "rest" && (
+          <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}><DemoMedia url={cur.videoUrl} /></div>
+        )}
         <svg viewBox="0 0 100 100" style={{ position: "absolute", top: 14, right: 14, width: 90, height: 90, display: done ? "none" : "block" }}>
           <circle cx="50" cy="50" r={R} fill="none" stroke="var(--border-strong)" strokeWidth="8" />
           <circle ref={ringRef} cx="50" cy="50" r={R} fill="none" stroke={BRAND} strokeWidth="8" strokeLinecap="round" strokeDasharray={CIRC} strokeDashoffset={CIRC} transform="rotate(-90 50 50)" />

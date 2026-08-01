@@ -5,6 +5,7 @@ import { Icon } from "@/components/icons";
 import { fullName, titleCase } from "@/lib/format";
 import { can } from "@/lib/rbac";
 import { NewTrainingPlanModal } from "./NewTrainingPlanModal";
+import { NewExerciseModal, ExerciseVideoModal } from "./ExerciseActions";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,8 @@ type ExerciseRow = {
   level: string | null;
   age_min: number | null;
   safety_notes: string | null;
+  video_url: string | null;
+  instructions: string | null;
 };
 
 type TemplateRow = {
@@ -75,7 +78,7 @@ export default async function TrainingPage() {
 
   const [exercises, templates, plans, kpiRows, memberOpts] = await Promise.all([
     query<ExerciseRow>(
-      `SELECT id, name, category, equipment, level, age_min, safety_notes
+      `SELECT id, name, category, equipment, level, age_min, safety_notes, video_url, instructions
          FROM exercises WHERE tenant_id = $1
         ORDER BY category, name`,
       [t]
@@ -128,7 +131,7 @@ export default async function TrainingPage() {
         title="Training"
         subtitle="Oefeningenbibliotheek, programmasjablonen en actieve trainingsplannen"
         icon="dumbbell"
-        actions={canWrite ? <NewTrainingPlanModal members={memberOpts} templates={templates} /> : undefined}
+        actions={canWrite ? <div className="flex items-center gap-2"><NewExerciseModal /><NewTrainingPlanModal members={memberOpts} templates={templates} /></div> : undefined}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
@@ -160,6 +163,7 @@ export default async function TrainingPage() {
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-sm" style={{ color: "var(--text)" }}>{ex.name}</span>
+                            {ex.video_url && <Badge tone="green"><Icon name="eye" size={11} /> video</Badge>}
                             {ex.safety_notes && (
                               <span title={ex.safety_notes} className="inline-flex">
                                 <Icon name="alert" size={14} style={{ color: "var(--amber, #d97706)" }} />
@@ -175,6 +179,7 @@ export default async function TrainingPage() {
                             <p className="text-xs mt-1" style={{ color: "var(--amber, #d97706)" }}>{ex.safety_notes}</p>
                           )}
                         </div>
+                        {canWrite && <div className="shrink-0"><ExerciseVideoModal exercise={ex} /></div>}
                       </div>
                     ))}
                   </div>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireMember } from "@/lib/portal-auth";
-import { queryOne } from "@/db/client";
+import { query, queryOne } from "@/db/client";
 import { Icon } from "@/components/icons";
 import { WorkoutPlayer, type Exercise } from "./WorkoutPlayer";
 import { completeWorkout } from "../actions";
@@ -46,7 +46,22 @@ export default async function WorkoutPage() {
     `SELECT goal, name FROM training_plans WHERE tenant_id=$1 AND member_id=$2 AND status='active' ORDER BY created_at DESC LIMIT 1`,
     [m.tenantId, m.id]
   );
-  const workout = buildWorkout(plan?.goal ?? null);
+  const base = buildWorkout(plan?.goal ?? null);
+
+  // Attach a coach video where the exercise library has one for this movement.
+  const vids = await query<{ name: string; video_url: string }>(
+    `SELECT name, video_url FROM exercises WHERE tenant_id=$1 AND video_url IS NOT NULL AND video_url <> ''`,
+    [m.tenantId]
+  );
+  const KEYS: Record<string, string[]> = {
+    jack: ["jack", "jump", "spring"], squat: ["squat", "kniebuig"],
+    punch: ["shadowbox", "jab", "stoot", "punch", "box"], pushup: ["push", "opdruk"], plank: ["plank"],
+  };
+  const findVid = (move: string) => {
+    const ks = KEYS[move] ?? [];
+    return vids.find((v) => ks.some((k) => v.name.toLowerCase().includes(k)))?.video_url;
+  };
+  const workout = base.map((e) => ({ ...e, videoUrl: findVid(e.move) }));
 
   return (
     <div className="space-y-4">
